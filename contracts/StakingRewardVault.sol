@@ -24,11 +24,11 @@ contract StakingRewardVault is IVault, Initializable{
         emit ReceiveDeposit(msg.sender, msg.value);
     }
 
-    function claimBNB(uint256 amount) override external onlyFromStakeBNBAgent returns(uint256) {
+    function claimBNB(uint256 amount, address payable recipient) override external onlyFromStakeBNBAgent returns(uint256) {
         if (address(this).balance < amount) {
             amount = address(this).balance;
         }
-        msg.sender.transfer(amount);
+        recipient.transfer(amount);
         return amount;
     }
 }

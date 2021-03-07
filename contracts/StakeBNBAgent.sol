@@ -21,13 +21,13 @@ contract StakingBNBAgent is Context, Initializable {
     uint8 constant public  SnapshotPeriod = 3;
 
     uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
+    uint256 public constant minimumUnstake = 1 * 1e8; // 1:SBNB
 
     address public BNBStakingToken;
     address public BCStakingProxyAddr;
-    address public maintainer;
+    address public stakingRewardMaintainer;
     address public stakingRewardVault;
     address public unstakeVault;
-    address public communityTaxVault;
 
     address public admin;
     address public pendingAdmin;
@@ -38,17 +38,17 @@ contract StakingBNBAgent is Context, Initializable {
         address payable staker;
         uint256 amount;
     }
-    mapping(uint256 => Unstake) unstakesMap;
-    uint256 headerIdx;
-    uint256 tailIdx;
+    mapping(uint256 => Unstake) public unstakesMap;
+    uint256 public headerIdx;
+    uint256 public tailIdx;
 
-    mapping(address => uint256) stakingReward;
+    mapping(address => uint256) public stakingReward;
 
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event LogStake(address indexed staker, uint256 amount);
-    event LogUnstake(address indexed staker, uint256 amount);
-    event MatureUnstake(address indexed staker, uint256 amount);
+    event LogUnstake(address indexed staker, uint256 amount, uint256 index);
+    event MatureUnstake(address indexed staker, uint256 amount, uint256 index);
     event Paused(address account);
     event Unpaused(address account);
     event ReceiveDeposit(address from, uint256 amount);
@@ -92,7 +92,7 @@ contract StakingBNBAgent is Context, Initializable {
 
     function calculateMode() internal returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
-        if (UTCTime<=600 || UTCTime<85800) {
+        if (UTCTime<=600 || UTCTime>85800) {
             return BreathePeriod;
         } else if (UTCTime <= 1800 && UTCTime > 600) {
             return CalculateRewardPeriod;
@@ -107,21 +107,19 @@ contract StakingBNBAgent is Context, Initializable {
         address adminAddr,
         address bnbStakingToken,
         address bcStakingProxyAddr,
-        address maintainerAddr,
+        address stakingRewardMaintainerAddr,
         address stakingRewardVaultAddr,
-        address unstakeVaultAddr,
-        address communityTaxVaultAddr
+        address unstakeVaultAddr
     ) external initializer{
         admin = adminAddr;
 
         BNBStakingToken = bnbStakingToken;
 
         BCStakingProxyAddr = bcStakingProxyAddr;
-        maintainer = maintainerAddr;
+        stakingRewardMaintainer = stakingRewardMaintainerAddr;
 
         stakingRewardVault = stakingRewardVaultAddr;
         unstakeVault = unstakeVaultAddr;
-        communityTaxVault = communityTaxVaultAddr;
     }
 
     function paused() public view returns (bool) {
@@ -165,31 +163,19 @@ contract StakingBNBAgent is Context, Initializable {
         unstakeVault = newUnstakeVault;
     }
 
-    function setCommunityTaxVault(address newCommunityTaxVault) onlyAdmin external {
-        communityTaxVault = newCommunityTaxVault;
-    }
-
-    function spendCommunityTax(address payable recipient, uint256 amount) onlyAdmin external {
-        uint256 actualAmount = IVault(communityTaxVault).claimBNB(amount);
-        recipient.transfer(actualAmount);
-    }
-
     function stakeBNB(uint256 amount) notContract mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
-        IStakingBNBToken(BNBStakingToken).mintTo(msg.sender, amount%1e10); // StakingBNB decimals is 8
+        IStakingBNBToken(BNBStakingToken).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, BCStakingProxyAddr, amount, uint64(block.timestamp + 3600));
 
         return true;
     }
 
-    function unstakeBNB(uint256 amount) notContract mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
-        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-        require(msg.value > miniRelayFee, "relay fee is not enough");
-
-        require(amount > minimumStake, "Invalid unstake amount");
+    function unstakeBNB(uint256 amount) notContract mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+        require(amount > minimumUnstake, "Invalid unstake amount");
         IBEP20(BNBStakingToken).transferFrom(msg.sender, address(this), amount);
         IStakingBNBToken(BNBStakingToken).burn(amount);
 
@@ -197,23 +183,23 @@ contract StakingBNBAgent is Context, Initializable {
             staker: msg.sender,
             amount: amount
         });
-        tailIdx++;
 
-        emit LogUnstake(msg.sender, amount);
+        emit LogUnstake(msg.sender, amount, tailIdx);
+        tailIdx++;
         return true;
     }
 
     function batchClaimUnstakedBNB(uint256 batchSize) notContract mustInMode(NormalPeriod) whenNotPaused external {
         for(uint256 idx=0; idx < batchSize && headerIdx < tailIdx; idx++) {
-            Unstake memory unstake = unstakesMap[idx];
-            if (unstakeVault.balance < unstake.amount) {
+            Unstake memory unstake = unstakesMap[headerIdx];
+            uint256 unstakeBNBAmount = unstake.amount.mul(1e10);
+            if (unstakeVault.balance < unstakeBNBAmount) {
                 return;
             }
-            uint256 actualAmount = IVault(unstakeVault).claimBNB(unstake.amount);
-            require(actualAmount==unstake.amount, "amount mismatch");
-            unstake.staker.transfer(unstake.amount);
+            uint256 actualAmount = IVault(unstakeVault).claimBNB(unstakeBNBAmount, unstake.staker);
+            require(actualAmount==unstakeBNBAmount, "amount mismatch");
 
-            emit MatureUnstake(unstake.staker, unstake.amount);
+            emit MatureUnstake(unstake.staker, unstake.amount, headerIdx);
 
             delete unstakesMap[headerIdx];
             headerIdx++;
@@ -222,14 +208,13 @@ contract StakingBNBAgent is Context, Initializable {
 
     function claimStakingReward() notContract mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         uint256 rewardAmount = stakingReward[msg.sender];
-        uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardAmount);
+        uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardAmount, msg.sender);
         stakingReward[msg.sender] = rewardAmount.sub(actualAmount);
-        msg.sender.transfer(rewardAmount);
         return true;
     }
 
     function setStakingReward(uint256[] memory rewards, address[] memory stakers) mustInMode(CalculateRewardPeriod) whenNotPaused external returns(bool) {
-        require(msg.sender == maintainer, "only maintainer is allowed");
+        require(msg.sender == stakingRewardMaintainer, "only stakingRewardMaintainer is allowed");
         require(rewards.length==stakers.length, "rewards length must equal to stakers length");
         for(uint256 idx=0; idx<rewards.length; idx++){
             stakingReward[stakers[idx]] = stakingReward[stakers[idx]].add(rewards[idx]);
