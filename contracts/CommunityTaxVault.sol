@@ -1,10 +1,12 @@
 pragma solidity 0.6.12;
 
-import "./interface/ICrossChain.sol";
 import "./interface/IVault.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
 contract CommunityTaxVault is IVault, Initializable {
+
+    mapping(uint64 => uint256) public communityTaxEachDay;
     address public governance;
 
     event ReceiveDeposit(address from, uint256 amount);

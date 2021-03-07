@@ -1,12 +1,9 @@
 pragma solidity 0.6.12;
 
-import "./interface/ICrossChain.sol";
 import "./interface/IVault.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
 contract StakingRewardVault is IVault, Initializable{
-
-    mapping(uint64 => uint256) public stakingRewardForEachDay;
     address payable public stakeBNBAgent;
 
     event ReceiveDeposit(address from, uint256 amount);

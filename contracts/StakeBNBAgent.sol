@@ -2,7 +2,6 @@ pragma solidity 0.6.12;
 
 import "./interface/IBEP20.sol";
 import "./interface/ITokenHub.sol";
-import "./interface/ICrossChain.sol";
 import "./interface/IVault.sol";
 import "./interface/IStakingBNBToken.sol";
 
@@ -15,7 +14,6 @@ contract StakingBNBAgent is Context, Initializable {
 
     address public constant ZERO_ADDR = 0x0000000000000000000000000000000000000000;
     address public constant TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
-    address public constant CROSSCHAIN_ADDR = 0x0000000000000000000000000000000000002000;
 
     uint8 constant public  BreathePeriod = 0;
     uint8 constant public  CalculateRewardPeriod = 1;

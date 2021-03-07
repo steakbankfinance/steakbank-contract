@@ -1,6 +1,5 @@
 pragma solidity 0.6.12;
 
-import "./interface/ICrossChain.sol";
 import "./interface/IVault.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
