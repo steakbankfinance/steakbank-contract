@@ -50,7 +50,7 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 
 #### BCStakingProxy
 
-`BCStakingProxy` is a centralized service. 
+`BCStakingProxy` is a staking proxy service which will build and send staking transactions to BC(Binance Chain).
 
 1. The service hold an address which is controlled by TSS. 
 2. All staked BNB will be transferred to the TSS account by cross chain transfer.
@@ -96,6 +96,6 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 
 ## Roadmap
 
-Current implementation depends on a centralized service. Once Binance Chain and Binance Smart Chain support native cross chain staking interoperation, we will migrate our platform as soon as possible.
+Current implementation depends on a `BCStakingProxy` service. Once Binance Chain and Binance Smart Chain support native cross chain staking interoperation, we will migrate our platform as soon as possible.
 
 

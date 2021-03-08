@@ -6,10 +6,10 @@ contract Governor {
     string public constant name = "SKB Governor";
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
-    function quorumVotes() public pure returns (uint) { return 600000e18; } // 600,000 = 2% of XVS
+    function quorumVotes() public pure returns (uint) { return 600000e18; } // 600,000 = 2% of SKB
 
     /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 300000e18; } // 300,000 = 1% of XVS
+    function proposalThreshold() public pure returns (uint) { return 300000e18; } // 300,000 = 1% of SKB
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
