@@ -3,13 +3,14 @@ pragma solidity 0.6.12;
 import "./interface/IBEP20.sol";
 import "./interface/ITokenHub.sol";
 import "./interface/IVault.sol";
-import "./interface/IStakingBNBToken.sol";
+import "./interface/ILBNB.sol";
 
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
-contract StakingBNBAgent is Context, Initializable {
+contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
 
     address public constant ZERO_ADDR = 0x0000000000000000000000000000000000000000;
@@ -23,7 +24,7 @@ contract StakingBNBAgent is Context, Initializable {
     uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
     uint256 public constant minimumUnstake = 1 * 1e8; // 1:SBNB
 
-    address public BNBStakingToken;
+    address public LBNB;
     address public BCStakingProxyAddr;
     address public stakingRewardMaintainer;
     address public stakingRewardVault;
@@ -64,17 +65,6 @@ contract StakingBNBAgent is Context, Initializable {
         _;
     }
 
-    function isContract(address addr) internal view returns (bool) {
-        uint size;
-        assembly { size := extcodesize(addr) }
-        return size > 0;
-    }
-
-    modifier notContract() {
-        require(!isContract(msg.sender) && msg.sender == tx.origin, "contract is not allowed");
-        _;
-    }
-
     modifier whenNotPaused() {
         require(!paused(), "Pausable: paused");
         _;
@@ -105,7 +95,7 @@ contract StakingBNBAgent is Context, Initializable {
 
     function initialize(
         address adminAddr,
-        address bnbStakingToken,
+        address lbnbAddr,
         address bcStakingProxyAddr,
         address stakingRewardMaintainerAddr,
         address stakingRewardVaultAddr,
@@ -113,7 +103,7 @@ contract StakingBNBAgent is Context, Initializable {
     ) external initializer{
         admin = adminAddr;
 
-        BNBStakingToken = bnbStakingToken;
+        LBNB = lbnbAddr;
 
         BCStakingProxyAddr = bcStakingProxyAddr;
         stakingRewardMaintainer = stakingRewardMaintainerAddr;
@@ -163,21 +153,21 @@ contract StakingBNBAgent is Context, Initializable {
         unstakeVault = newUnstakeVault;
     }
 
-    function stakeBNB(uint256 amount) notContract mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
+    function stakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
-        IStakingBNBToken(BNBStakingToken).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
+        ILBNB(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, BCStakingProxyAddr, amount, uint64(block.timestamp + 3600));
 
         return true;
     }
 
-    function unstakeBNB(uint256 amount) notContract mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         require(amount > minimumUnstake, "Invalid unstake amount");
-        IBEP20(BNBStakingToken).transferFrom(msg.sender, address(this), amount);
-        IStakingBNBToken(BNBStakingToken).burn(amount);
+        IBEP20(LBNB).transferFrom(msg.sender, address(this), amount);
+        ILBNB(LBNB).burn(amount);
 
         unstakesMap[tailIdx] = Unstake({
             staker: msg.sender,
@@ -189,7 +179,7 @@ contract StakingBNBAgent is Context, Initializable {
         return true;
     }
 
-    function batchClaimUnstakedBNB(uint256 batchSize) notContract mustInMode(NormalPeriod) whenNotPaused external {
+    function batchClaimUnstakedBNB(uint256 batchSize) nonReentrant mustInMode(NormalPeriod) whenNotPaused external {
         for(uint256 idx=0; idx < batchSize && headerIdx < tailIdx; idx++) {
             Unstake memory unstake = unstakesMap[headerIdx];
             uint256 unstakeBNBAmount = unstake.amount.mul(1e10);
@@ -206,10 +196,13 @@ contract StakingBNBAgent is Context, Initializable {
         }
     }
 
-    function claimStakingReward() notContract mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function claimStakingReward() nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         uint256 rewardAmount = stakingReward[msg.sender];
+        stakingReward[msg.sender] = 0;
         uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardAmount, msg.sender);
-        stakingReward[msg.sender] = rewardAmount.sub(actualAmount);
+        if (rewardAmount > actualAmount) {
+            stakingReward[msg.sender] = rewardAmount.sub(actualAmount);
+        }
         return true;
     }
 

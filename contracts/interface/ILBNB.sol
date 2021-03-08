@@ -1,6 +1,6 @@
 pragma solidity ^0.6.0;
 
-interface IStakingBNBToken {
+interface ILBNB {
 
     function mintTo(address to, uint256 amount) external returns (bool);
 

@@ -1,19 +1,19 @@
 pragma solidity 0.6.12;
 
 import "./interface/IBEP20.sol";
-import "./interface/IStakingBNBToken.sol";
+import "./interface/ILBNB.sol";
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
-contract BNBStakingTokenImpl is Context, IBEP20, IStakingBNBToken, Initializable {
+contract LBNBImpl is Context, IBEP20, ILBNB, Initializable {
     using SafeMath for uint256;
 
     mapping (address => uint256) private _balances;
     mapping (address => mapping (address => uint256)) private _allowances;
     uint256 private _totalSupply;
-    string private constant _name = "StakingBNB";
-    string private constant _symbol = "SBNB";
+    string private constant _name = "Liquidity Staking BNB";
+    string private constant _symbol = "LBNB";
     uint8 private constant _decimals = 8;
 
     address private _owner;
