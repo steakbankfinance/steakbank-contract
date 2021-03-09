@@ -14,11 +14,12 @@
     "lint:js": "eslint test/**/*.js",
     "lint:sol:fix": "solium -d contracts/ --fix",
     "lint:sol": "solium -d contracts/",
-    "flatten": "truffle-flattener contracts/BNBStakingTokenImpl.sol > flatten/BNBStakingTokenImpl.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/StakeBNBAgent.sol > flatten/StakeBNBAgent.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
+    "flatten": "truffle-flattener contracts/LBNBImpl.sol > flatten/LBNBImpl.sol && truffle-flattener contracts/SKBImpl.sol > flatten/SKBImpl.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/StakeBNBAgent.sol > flatten/StakeBNBAgent.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
   },
   "author": "",
   "license": "Apache License",
   "dependencies": {
+    "@pancakeswap/pancake-swap-lib": "^0.0.1",
     "commander": "^3.0.1",
     "nunjucks": "^3.2.0",
     "openzeppelin-solidity": "v3.4.1",

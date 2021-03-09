@@ -3,7 +3,7 @@ pragma solidity 0.6.12;
 import "./interface/IBEP20.sol";
 import "./interface/ITokenHub.sol";
 import "./interface/IVault.sol";
-import "./interface/ILBNB.sol";
+import "./interface/IToken.sol";
 
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -158,7 +158,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
-        ILBNB(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
+        IToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, BCStakingProxyAddr, amount, uint64(block.timestamp + 3600));
 
         return true;
@@ -167,7 +167,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         require(amount > minimumUnstake, "Invalid unstake amount");
         IBEP20(LBNB).transferFrom(msg.sender, address(this), amount);
-        ILBNB(LBNB).burn(amount);
+        IToken(LBNB).burn(amount);
 
         unstakesMap[tailIdx] = Unstake({
             staker: msg.sender,
