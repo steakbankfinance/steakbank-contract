@@ -1,6 +1,5 @@
 pragma solidity 0.6.12;
 
-import "./interface/IBEP20.sol";
 import "./interface/ITokenHub.sol";
 import "./interface/IVault.sol";
 import "./interface/IToken.sol";
@@ -9,23 +8,24 @@ import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 
 contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     address public constant ZERO_ADDR = 0x0000000000000000000000000000000000000000;
     address public constant TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
 
     uint8 constant public  BreathePeriod = 0;
-    uint8 constant public  CalculateRewardPeriod = 1;
-    uint8 constant public  NormalPeriod = 2;
-    uint8 constant public  SnapshotPeriod = 3;
+    uint8 constant public  NormalPeriod = 1;
+    uint8 constant public  SnapshotPeriod = 2;
 
     uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
     uint256 public constant minimumUnstake = 1 * 1e8; // 1:SBNB
 
     address public LBNB;
-    address public BCStakingProxyAddr;
+    address public bcStakingTSS;
     address public stakingRewardMaintainer;
     address public stakingRewardVault;
     address public unstakeVault;
@@ -76,17 +76,15 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     }
 
     modifier mustInMode(uint8 expectedMode) {
-        require(calculateMode() == expectedMode, "Wrong mode");
+        require(getMode() == expectedMode, "Wrong mode");
         _;
     }
 
-    function calculateMode() internal returns (uint8) {
+    function getMode() public returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
         if (UTCTime<=600 || UTCTime>85800) {
             return BreathePeriod;
-        } else if (UTCTime <= 1800 && UTCTime > 600) {
-            return CalculateRewardPeriod;
-        } else if (UTCTime <= 84600 && UTCTime > 1800) {
+        } else if (UTCTime <= 84600 && UTCTime > 600) {
             return NormalPeriod;
         } else if (UTCTime <= 85800 && UTCTime > 84600){
             return SnapshotPeriod;
@@ -96,7 +94,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     function initialize(
         address adminAddr,
         address lbnbAddr,
-        address bcStakingProxyAddr,
+        address bcStakingTSSAddr,
         address stakingRewardMaintainerAddr,
         address stakingRewardVaultAddr,
         address unstakeVaultAddr
@@ -105,7 +103,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
         LBNB = lbnbAddr;
 
-        BCStakingProxyAddr = bcStakingProxyAddr;
+        bcStakingTSS = bcStakingTSSAddr;
         stakingRewardMaintainer = stakingRewardMaintainerAddr;
 
         stakingRewardVault = stakingRewardVaultAddr;
@@ -141,8 +139,8 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         emit NewPendingAdmin(pendingAdmin);
     }
 
-    function setBCStakingProxyAddr(address newBCStakingProxyAddr) onlyAdmin external {
-        BCStakingProxyAddr = newBCStakingProxyAddr;
+    function setbcStakingTSS(address newbcStakingTSS) onlyAdmin external {
+        bcStakingTSS = newbcStakingTSS;
     }
 
     function setStakingRewardVault(address newStakingRewardVault) onlyAdmin external {
@@ -159,14 +157,14 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         require(amount%1e10==0 && amount>minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
         IToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
-        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, BCStakingProxyAddr, amount, uint64(block.timestamp + 3600));
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 
         return true;
     }
 
     function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         require(amount > minimumUnstake, "Invalid unstake amount");
-        IBEP20(LBNB).transferFrom(msg.sender, address(this), amount);
+        IERC20(LBNB).safeTransferFrom(msg.sender, address(this), amount);
         IToken(LBNB).burn(amount);
 
         unstakesMap[tailIdx] = Unstake({
@@ -206,7 +204,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function setStakingReward(uint256[] memory rewards, address[] memory stakers) mustInMode(CalculateRewardPeriod) whenNotPaused external returns(bool) {
+    function setStakingReward(uint256[] memory rewards, address[] memory stakers) whenNotPaused external returns(bool) {
         require(msg.sender == stakingRewardMaintainer, "only stakingRewardMaintainer is allowed");
         require(rewards.length==stakers.length, "rewards length must equal to stakers length");
         for(uint256 idx=0; idx<rewards.length; idx++){
