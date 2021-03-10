@@ -2,10 +2,9 @@ pragma solidity 0.6.12;
 
 import "./interface/IVault.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 
-contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
+contract CommunityTaxVault is IVault, ReentrancyGuard {
 
     mapping(uint64 => uint256) public communityTaxEachDay;
     address public governor;
@@ -13,15 +12,12 @@ contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
     event ReceiveDeposit(address from, uint256 amount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor() public {
+    constructor(address payable govAddr) public {
+        governor = govAddr;
     }
 
     receive() external payable{
         emit ReceiveDeposit(msg.sender, msg.value);
-    }
-
-    function initialize(address payable govAddr) public initializer{
-        governor = govAddr;
     }
 
     modifier onlyGov() {

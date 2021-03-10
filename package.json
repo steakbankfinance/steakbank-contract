@@ -14,7 +14,7 @@
     "lint:js": "eslint test/**/*.js",
     "lint:sol:fix": "solium -d contracts/ --fix",
     "lint:sol": "solium -d contracts/",
-    "flatten": "truffle-flattener contracts/LBNBImpl.sol > flatten/LBNBImpl.sol && truffle-flattener contracts/SKBImpl.sol > flatten/SKBImpl.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/StakeBNBAgent.sol > flatten/StakeBNBAgent.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
+    "flatten": "truffle-flattener contracts/governance/Timelock.sol > flatten/Timelock.sol && truffle-flattener contracts/governance/Governor.sol > flatten/Governor.sol && truffle-flattener contracts/LBNBImpl.sol > flatten/LBNBImpl.sol && truffle-flattener contracts/SKBImpl.sol > flatten/SKBImpl.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/StakeBNBAgent.sol > flatten/StakeBNBAgent.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
   },
   "author": "",
   "license": "Apache License",
