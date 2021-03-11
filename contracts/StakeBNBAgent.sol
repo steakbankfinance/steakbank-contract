@@ -40,6 +40,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         uint256 amount;
     }
     mapping(uint256 => Unstake) public unstakesMap;
+    mapping(address => uint256[]) public accountUnstakeSeqsMap;
     uint256 public headerIdx;
     uint256 public tailIdx;
 
@@ -194,6 +195,8 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
             staker: msg.sender,
             amount: amount
         });
+        uint256[] storage unstakes = accountUnstakeSeqsMap[msg.sender];
+        unstakes.push(tailIdx);
 
         emit LogUnstake(msg.sender, amount, tailIdx);
         tailIdx++;
@@ -203,20 +206,58 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     function accelerateUnstakedMature(uint256 unstakeIndex) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         require(unstakeIndex>headerIdx.add(nonAccelerateLength) && unstakeIndex<=tailIdx, "unstakeIndex is out of accelerate range");
 
+        Unstake memory priorUnstake = unstakesMap[unstakeIndex-1];
         Unstake memory unstake = unstakesMap[unstakeIndex];
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
+        require(priorUnstake.staker!=msg.sender, "both unstakes are from the same user");
 
         uint256 skbBurnAmount = unstake.amount.mul(priceToAccelerateUnstake);
         IERC20(SKB).safeTransferFrom(msg.sender, address(this), skbBurnAmount);
         IMintBurnToken(SKB).burn(skbBurnAmount);
 
-        Unstake memory priorUnstake = unstakesMap[unstakeIndex-1];
+        uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[msg.sender];
+        uint256[] storage priorUnstakeSeqs = accountUnstakeSeqsMap[priorUnstake.staker];
+
         unstakesMap[unstakeIndex-1] = unstake;
         unstakesMap[unstakeIndex] = priorUnstake;
+
+        for(uint256 idx=0; idx < unstakeSeqs.length; idx++) {
+            if (unstakeSeqs[idx]==unstakeIndex) {
+                unstakeSeqs[idx] = unstakeIndex - 1;
+                break;
+            }
+        }
+
+        for(uint256 idx=0; idx < priorUnstakeSeqs.length; idx++) {
+            if (priorUnstakeSeqs[idx]==unstakeIndex-1) {
+                priorUnstakeSeqs[idx] = unstakeIndex;
+                break;
+            }
+        }
 
         emit AcceleratedUnstakedBNB(msg.sender, priorUnstake.staker, unstakeIndex);
 
         return true;
+    }
+
+    function getUnstakeSeqsLength(address addr) external view returns (uint256) {
+        return accountUnstakeSeqsMap[addr].length;
+    }
+
+    function getUnstakeSequence(address addr, uint256 idx) external view returns (uint256) {
+        return accountUnstakeSeqsMap[addr][idx];
+    }
+
+    function isUnstakeMature(uint256 unstakeSeq) external view returns (bool) {
+        if (unstakeSeq < headerIdx || unstakeSeq >= tailIdx) {
+            return false;
+        }
+        uint256 totalUnstakeAmount = 0;
+        for(uint256 idx=headerIdx; idx <= unstakeSeq; idx++) {
+            Unstake memory unstake = unstakesMap[idx];
+            totalUnstakeAmount=totalUnstakeAmount.add(unstake.amount.mul(1e10));
+        }
+        return unstakeVault.balance >= totalUnstakeAmount;
     }
 
     function batchClaimUnstakedBNB(uint256 batchSize) nonReentrant mustInMode(NormalPeriod) whenNotPaused external {
@@ -232,6 +273,16 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
             emit MatureUnstake(unstake.staker, unstake.amount, headerIdx);
 
             delete unstakesMap[headerIdx];
+
+            uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[unstake.staker];
+            uint256 lastSeq = unstakeSeqs[unstakeSeqs.length-1];
+            unstakeSeqs.pop();
+            for(uint256 idex=0; idex < unstakeSeqs.length; idex++) {
+                if (unstakeSeqs[idex]==headerIdx) {
+                    unstakeSeqs[idex] = lastSeq;
+                    break;
+                }
+            }
             headerIdx++;
         }
     }
