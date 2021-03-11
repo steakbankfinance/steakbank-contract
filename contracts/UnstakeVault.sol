@@ -7,6 +7,7 @@ contract UnstakeVault is IVault, ReentrancyGuard {
     address payable public stakeBNBAgent;
 
     event ReceiveDeposit(address from, uint256 amount);
+    event Withdraw(address recipient, uint256 amount);
 
     constructor(address payable stakeBNBAgentAddr) public {
         stakeBNBAgent = stakeBNBAgentAddr;
@@ -26,6 +27,7 @@ contract UnstakeVault is IVault, ReentrancyGuard {
             amount = address(this).balance;
         }
         recipient.transfer(amount);
+        emit Withdraw(recipient, amount);
         return amount;
     }
 }

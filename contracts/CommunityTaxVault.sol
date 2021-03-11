@@ -10,6 +10,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     address public governor;
 
     event ReceiveDeposit(address from, uint256 amount);
+    event Withdraw(address recipient, uint256 amount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
     constructor(address payable govAddr) public {
@@ -37,6 +38,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
             amount = address(this).balance;
         }
         recipient.transfer(amount);
+        emit Withdraw(recipient, amount);
         return amount;
     }
 }
