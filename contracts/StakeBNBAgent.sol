@@ -2,7 +2,7 @@ pragma solidity 0.6.12;
 
 import "./interface/ITokenHub.sol";
 import "./interface/IVault.sol";
-import "./interface/IToken.sol";
+import "./interface/IMintBurnToken.sol";
 
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -156,7 +156,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
-        IToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
+        IMintBurnToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 
         return true;
@@ -165,7 +165,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         require(amount > minimumUnstake, "Invalid unstake amount");
         IERC20(LBNB).safeTransferFrom(msg.sender, address(this), amount);
-        IToken(LBNB).burn(amount);
+        IMintBurnToken(LBNB).burn(amount);
 
         unstakesMap[tailIdx] = Unstake({
             staker: msg.sender,

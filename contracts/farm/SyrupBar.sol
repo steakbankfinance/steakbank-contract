@@ -1,31 +1,38 @@
 pragma solidity 0.6.12;
 
-import "./lib/BEP20.sol";
-import "./interface/IMintBurnToken.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
 
-// SKBToken with Governance.
-contract SKBImpl is IMintBurnToken, BEP20, Initializable {
-
-    constructor() public {}
-
-    function initialize(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply, address ownerAddr) public initializer {
-        super.initializeBEP20(name, symbol, decimals, initialSupply, ownerAddr);
-    }
-
+// SyrupBar with Governance.
+contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
-    function mintTo(address _to, uint256 _amount) override external onlyOwner returns (bool){
+    function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);
         _moveDelegates(address(0), _delegates[_to], _amount);
-        return true;
     }
 
-    /**
-   * @dev Burn `amount` tokens and decreasing the total supply.
-   */
-    function burn(uint256 amount) override external returns (bool) {
-        _burn(_msgSender(), amount);
-        return true;
+    function burn(address _from ,uint256 _amount) public onlyOwner {
+        _burn(_from, _amount);
+        _moveDelegates(_delegates[_from], address(0), _amount);
+    }
+
+    // The SKB TOKEN!
+    IBEP20 public skb;
+
+
+    constructor(
+        IBEP20 _skb
+    ) public {
+        skb = _skb;
+    }
+
+    // Safe SKB transfer function, just in case if rounding error causes pool to not have enough SKBs.
+    function safeSKBTransfer(address _to, uint256 _amount) public onlyOwner {
+        uint256 skbBal = skb.balanceOf(address(this));
+        if (_amount > skbBal) {
+            skb.transfer(_to, skbBal);
+        } else {
+            skb.transfer(_to, _amount);
+        }
     }
 
     // Copied and modified from YAM code:
@@ -58,7 +65,7 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
     /// @notice A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
 
-    /// @notice An event thats emitted when an account changes its delegate
+      /// @notice An event thats emitted when an account changes its delegate
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
@@ -69,17 +76,17 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
      * @param delegator The address to get delegatee for
      */
     function delegates(address delegator)
-    external
-    view
-    returns (address)
+        external
+        view
+        returns (address)
     {
         return _delegates[delegator];
     }
 
-    /**
-     * @notice Delegate votes from `msg.sender` to `delegatee`
-     * @param delegatee The address to delegate votes to
-     */
+   /**
+    * @notice Delegate votes from `msg.sender` to `delegatee`
+    * @param delegatee The address to delegate votes to
+    */
     function delegate(address delegatee) external {
         return _delegate(msg.sender, delegatee);
     }
@@ -101,7 +108,7 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
         bytes32 r,
         bytes32 s
     )
-    external
+        external
     {
         bytes32 domainSeparator = keccak256(
             abi.encode(
@@ -142,9 +149,9 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
      * @return The number of current votes for `account`
      */
     function getCurrentVotes(address account)
-    external
-    view
-    returns (uint256)
+        external
+        view
+        returns (uint256)
     {
         uint32 nCheckpoints = numCheckpoints[account];
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
@@ -158,9 +165,9 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
      * @return The number of votes the account had as of the given block
      */
     function getPriorVotes(address account, uint blockNumber)
-    external
-    view
-    returns (uint256)
+        external
+        view
+        returns (uint256)
     {
         require(blockNumber < block.number, "SKB::getPriorVotes: not yet determined");
 
@@ -196,10 +203,10 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
     }
 
     function _delegate(address delegator, address delegatee)
-    internal
+        internal
     {
         address currentDelegate = _delegates[delegator];
-        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying CAKEs (not scaled);
+        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying SKBs (not scaled);
         _delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -233,7 +240,7 @@ contract SKBImpl is IMintBurnToken, BEP20, Initializable {
         uint256 oldVotes,
         uint256 newVotes
     )
-    internal
+        internal
     {
         uint32 blockNumber = safe32(block.number, "SKB::_writeCheckpoint: block number exceeds 32 bits");
 

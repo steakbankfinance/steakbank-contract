@@ -2,7 +2,8 @@
 
 pragma solidity >=0.6.0;
 
-import '../interface/IBEP20.sol';
+import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
+
 import 'openzeppelin-solidity/contracts/GSN/Context.sol';
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
 import 'openzeppelin-solidity/contracts/utils/Address.sol';
@@ -40,7 +41,14 @@ contract BEP20 is Context, IBEP20 {
     /**
      * @dev Returns the address of the current owner.
      */
-    function owner() public override view returns (address) {
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function getOwner() public override view returns (address) {
         return _owner;
     }
 

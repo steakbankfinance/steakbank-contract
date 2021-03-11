@@ -1,6 +1,6 @@
 pragma solidity ^0.6.0;
 
-interface IToken {
+interface IMintBurnToken {
 
     function mintTo(address to, uint256 amount) external returns (bool);
 

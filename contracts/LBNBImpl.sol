@@ -1,10 +1,10 @@
 pragma solidity 0.6.12;
 
 import "./lib/BEP20.sol";
-import "./interface/IToken.sol";
+import "./interface/IMintBurnToken.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
-contract LBNBImpl is BEP20, IToken, Initializable {
+contract LBNBImpl is BEP20, IMintBurnToken, Initializable {
 
     constructor() public {}
 
