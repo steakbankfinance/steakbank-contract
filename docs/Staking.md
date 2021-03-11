@@ -2,7 +2,7 @@
 
 ## Introduction about Native BSC(Binance Smart Chain) Staking Mechanism
 
-The staking engine for BSC is on BC(Binance Chain). BSC users have to transfer their BNB to their BC wallets first. Then they can send staking transactions from their BC wallets. At each UTC 00:00, the BSC staking engine will distribute the previous received validator reward to all validator and delegators. Besides, according to the staking snapshot at UTC 00:00, the BSC staking engine will generate a cross chain package which specify all qualified BSC validators. Once the cross chain package is delivered on BSC, BSC will transfer the accumulated validator rewards back to BC and apply new validator set.
+The staking engine for BSC is on BC(Binance Chain). BSC's users have to transfer their BNB to their BC wallets first. Then they can send staking transactions from their BC wallets. At each UTC 00:00, the BSC staking engine will distribute the previous received validator reward to all validator and delegators. Besides, according to the staking snapshot at UTC 00:00, the BSC staking engine will generate a cross chain package which specify all qualified BSC validators. Once the cross chain package is delivered on BSC, BSC will transfer the accumulated validator rewards back to BC and apply new validator set.
 
 ## Characteristics of Native BSC Staking Mechanism
 
@@ -40,13 +40,15 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 
 #### Methods
 
-1. `stake`: Stake BNB to get SBNB(Staking BNB Token)
+1. `stake`: Stake BNB to get LBNB
 
-2. `unstake`: Burn SBNB(Staking BNB Token) to get BNB. Users can't get staked BNB immediately. Users have to wait for there is enough BNB in unstakedBNBVault.
+2. `unstake`: Burn LBNB to get BNB. Users can't get staked BNB immediately. Only a pending unstake will be created and insert into a queue. Users have to wait for there is enough BNB in `unstakedBNBVault`.
 
-3. `claimUnstakedBNB`: Once there is enough BNB in unstakedBNBVault, anyone can call this method to claim unstaked BNB.
+3. `accelerateUnstakedMature`: All pending unstakes are inserted into a queue. Only after all prior unstakes are fulfilled by the `unstakedBNBVault`, then current one can be claimed. This method can be used to move current unstake to the prior position. During this process, some SKB token from user wallet will be burned and the burn amount is proportional to the unstaked amount.
+   
+4. `batchClaimUnstakedBNB`: Once there is enough BNB in unstakedBNBVault, anyone can call this method to claim unstaked BNB.
 
-4. `claimStakingReward`: Claim staking reward. 
+5. `claimStakingReward`: Claim staking reward. 
 
 #### BCStakingProxy
 
@@ -56,9 +58,9 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 2. All staked BNB will be transferred to the TSS account by cross chain transfer.
 3. It collects all stake and unstake event from StakingBNBAgent contract.
 4. It will send stake or unstake transactions to BC(Binance Chain) at snapshot period(will be introduced later) from the TSS account. Suppose the total stake amount is 100:BNB and the total unstake amount is 50:BNB, the only 50:BNB will be staked. And the rest of them will be transferred to `UnstakedVault` by cross chain transfer.
-5. It will take a snapshot of SBNB(Staking BNB Token) at first height in snapshot period, which is the basement of staking reward calculation.
-6. During calculate staking reward period(will be introduced later), it will transfer received staking reward to `StakingRewardVault` and transfer matured unstaked BNB `StakingRewardVault`. Not all staking reward will be distributed to users. 1% of them will be left for staking transaction fee and cross chain fee, and 4% will be transferred to `CommunityTaxVault`.
-7. During calculate staking reward period, it will also calculate reward for all stakers and write the reward amounts to `StakingBNBAgent` contract. If a staker reward is less than 0.01:BNB, then the reward won't be write into `StakingBNBAgent` contract. The tiny reward won't be just lost, BCStakingProxy will accumulate the reward for all tiny users.
+5. It will take a snapshot of LBNB(Staking BNB Token) at first height in snapshot period, which is the basement of staking reward calculation.
+6. After UTC 00:00, it will transfer received staking reward to `StakingRewardVault` and transfer matured unstaked BNB to `StakingRewardVault`. Not all staking reward will be distributed to users. 1% of them will be left for staking transaction fee and cross chain fee, and 4% will be transferred to `CommunityTaxVault`.
+7. It will also calculate reward for all stakers and write the reward amounts to `StakingBNBAgent` contract. 
 
 #### Vaults
 
@@ -72,19 +74,17 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 
 ![img](./img/period.png)
 
-1. `Breathe Period`: BC will do some liquidation task at UTC 00:00, `StakingBNBAgent` will reject any operation in this period.
+1. `Breathe Period`: BC will do some liquidation task at UTC 00:00, `StakingBNBAgent` will reject any users' operations in this period.
 
-2. `Calculate Staking Reward Period`: The TSS account of `BCStakingProxy` will receive staking reward and matured unstaked BNB. `BCStakingProxy` will calculate reward to all stakers and transfer staking rewards to `StakingRewardVault`(95%) and `CommunityTaxVault`(4%). The rest 1% will be left for transactions fee and relay fee. The matured unstaked BNB will be transferred to `UnstakedVault`.
+2. `Normal Period`: Users are fee to call methods: `stake`, `unstake`, `accelerateUnstakedMature`, `batchClaimUnstakedBNB` and `claimStakingReward`.
 
-3. `Normal Period`: Users are fee to call methods: `stake`, `unstake`, `claimUnstakedBNB` and `claimStakingReward`.
-
-4. `Snapshot SBNB Period`: `BCStakingProxy` will take a snapshot for SBNB holders at the first height of this period. Besides, `BCStakingProxy` will do stake, unstake and restake(redelegate) to achieve better APY.
+3. `Snapshot LBNB Period`: `StakingBNBAgent` will reject any users' operations in this period. `BCStakingProxy` will take a snapshot for LBNB holders at the first height of this period. Then, `BCStakingProxy` will do stake, unstake and restake(redelegate) to achieve better APY.
 
 ### Characteristics
 
 #### Liquidity
 
-   After staking BNB, users will get equivalent amount SBNB. SBNB can be used in other defi platforms. We will also provide a mine pool. Users can stake their SBNB to get governence token.
+   After staking BNB, users will get an equivalent amount LBNB. LBNB can be used in other defi platforms. We will also provide a mine pool. Users can stake their LBNB to get governence token.
 
 #### Quick unstake
 
@@ -93,6 +93,16 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 #### APY
 
    `BCStakingProxy` will monitor all validator changes, analysis the changes and dynamically calibrate staking strategy to achieve better APY.
+
+## Token Economic
+
+### LBNB
+
+Users stake BNB and get LBNB back. The swap pair for LBNB and BNB will be created on Pancake swap. User can add liquidity to the swap pair to get related lp token. The stake the lp token on our platform to earn SKB.
+
+### SKB
+
+SKB token is the governance token for our platform. Users hold this token can vote the proposals. The accumulated BNB in `communityTaxVault` will be used to buy SKB and burn. Besides, SKB can be used in calling `accelerateUnstakedMature`. 
 
 ## Roadmap
 
