@@ -36,6 +36,7 @@ contract BEP20 is Context, IBEP20 {
         _decimals = decimals;
         _totalSupply = initialSupply;
         _owner = ownerAddr;
+        _mint(_owner, initialSupply);
     }
 
     /**

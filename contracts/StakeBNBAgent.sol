@@ -22,9 +22,9 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     uint8 constant public  SnapshotPeriod = 2;
 
     uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
-    uint256 public constant minimumUnstake = 1 * 1e8; // 1:SBNB
 
     address public LBNB;
+    address public SKB;
     address public bcStakingTSS;
     address public stakingRewardMaintainer;
     address public stakingRewardVault;
@@ -45,6 +45,9 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
     mapping(address => uint256) public stakingReward;
 
+    uint256 public priceToAccelerateUnstake;
+    uint256 public nonAccelerateLength;
+
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event LogStake(address indexed staker, uint256 amount);
@@ -53,12 +56,9 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     event Paused(address account);
     event Unpaused(address account);
     event ReceiveDeposit(address from, uint256 amount);
+    event AcceleratedUnstakedBNB(address AcceleratedStaker, address priorStaker, uint256 AcceleratedUnstakeIdx);
 
     constructor() public {}
-
-    receive() external payable{
-        emit ReceiveDeposit(msg.sender, msg.value);
-    }
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "only admin is allowed");
@@ -88,26 +88,35 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
             return NormalPeriod;
         } else if (UTCTime <= 85800 && UTCTime > 84600){
             return SnapshotPeriod;
+        } else {
+            return NormalPeriod;
         }
     }
 
     function initialize(
-        address adminAddr,
-        address lbnbAddr,
-        address bcStakingTSSAddr,
-        address stakingRewardMaintainerAddr,
-        address stakingRewardVaultAddr,
-        address unstakeVaultAddr
+        address _admin,
+        address _LBNB,
+        address _SKB,
+        address _bcStakingTSS,
+        address _stakingRewardMaintainer,
+        address _stakingRewardVault,
+        address _unstakeVault,
+        uint256 _priceToAccelerateUnstake,
+        uint256 _nonAccelerateLength
     ) external initializer{
-        admin = adminAddr;
+        admin = _admin;
 
-        LBNB = lbnbAddr;
+        LBNB = _LBNB;
+        SKB = _SKB;
 
-        bcStakingTSS = bcStakingTSSAddr;
-        stakingRewardMaintainer = stakingRewardMaintainerAddr;
+        bcStakingTSS = _bcStakingTSS;
+        stakingRewardMaintainer = _stakingRewardMaintainer;
 
-        stakingRewardVault = stakingRewardVaultAddr;
-        unstakeVault = unstakeVaultAddr;
+        stakingRewardVault = _stakingRewardVault;
+        unstakeVault = _unstakeVault;
+
+        priceToAccelerateUnstake = _priceToAccelerateUnstake;
+        nonAccelerateLength = _nonAccelerateLength;
     }
 
     function paused() public view returns (bool) {
@@ -151,6 +160,14 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         unstakeVault = newUnstakeVault;
     }
 
+    function setPriceToAccelerateUnstake(uint256 newPriceToAccelerateUnstake) onlyAdmin external {
+        priceToAccelerateUnstake = newPriceToAccelerateUnstake;
+    }
+
+    function setNonAccelerateLength(uint256 newNonAccelerateLength) onlyAdmin external {
+        nonAccelerateLength = newNonAccelerateLength;
+    }
+
     function stakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
@@ -163,7 +180,6 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     }
 
     function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
-        require(amount > minimumUnstake, "Invalid unstake amount");
         IERC20(LBNB).safeTransferFrom(msg.sender, address(this), amount);
         IMintBurnToken(LBNB).burn(amount);
 
@@ -174,6 +190,25 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
         emit LogUnstake(msg.sender, amount, tailIdx);
         tailIdx++;
+        return true;
+    }
+
+    function accelerateUnstakedMature(uint256 unstakeIndex) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+        require(unstakeIndex>headerIdx.add(nonAccelerateLength) && unstakeIndex<=tailIdx, "unstakeIndex is out of accelerate range");
+
+        Unstake memory unstake = unstakesMap[unstakeIndex];
+        require(unstake.staker==msg.sender, "only staker can accelerate itself");
+
+        uint256 skbBurnAmount = unstake.amount.mul(priceToAccelerateUnstake);
+        IERC20(SKB).safeTransferFrom(msg.sender, address(this), skbBurnAmount);
+        IMintBurnToken(SKB).burn(skbBurnAmount);
+
+        Unstake memory priorUnstake = unstakesMap[unstakeIndex-1];
+        unstakesMap[unstakeIndex-1] = unstake;
+        unstakesMap[unstakeIndex] = priorUnstake;
+
+        emit AcceleratedUnstakedBNB(msg.sender, priorUnstake.staker, unstakeIndex);
+
         return true;
     }
 
