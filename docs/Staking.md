@@ -42,9 +42,11 @@ StakingBNB is a DeFi platform which can provide better staking BNB service than 
 
 1. `stake`: Stake BNB to get LBNB
 
-2. `unstake`: Burn LBNB to get BNB. Users can't get staked BNB immediately. Only a pending unstake will be created and insert into a queue. Users have to wait for there is enough BNB in `unstakedBNBVault`.
+2. `unstake`: Burn LBNB to get BNB. Users can't get staked BNB immediately. a pending unstake will be created and insert into a queue. Users have to wait for there is enough BNB in `unstakedBNBVault`.
 
-3. `accelerateUnstakedMature`: All pending unstakes are inserted into a queue. Only after all prior unstakes are fulfilled by the `unstakedBNBVault`, then current one can be claimed. This method can be used to move current unstake to the prior position. During this process, some SKB token from user wallet will be burned and the burn amount is proportional to the unstaked amount.
+![img](./img/unstakequeue.png)
+
+3. `accelerateUnstakedMature`: All pending unstakes will be inserted into the unstake queue. Only after all prior unstakes are fulfilled by the `unstakedBNBVault`, then current one can be claimed. This method can be used to move current unstake to the prior position. During this process, some SKB token from user wallet will be burned and the burn amount is proportional to the unstaked amount.
    
 4. `batchClaimUnstakedBNB`: Once there is enough BNB in unstakedBNBVault, anyone can call this method to claim unstaked BNB.
 
