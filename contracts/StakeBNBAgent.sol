@@ -48,6 +48,8 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     uint256 public priceToAccelerateUnstake;
     uint256 public nonAccelerateLength;
 
+    uint256 public rewardPerStaking;
+
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
     event LogStake(address indexed staker, uint256 amount);
@@ -62,6 +64,11 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "only admin is allowed");
+        _;
+    }
+
+    modifier onlyRewardMaintainer() {
+        require(msg.sender == stakingRewardMaintainer, "only admin is allowed");
         _;
     }
 
@@ -148,8 +155,8 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         emit NewPendingAdmin(pendingAdmin);
     }
 
-    function setbcStakingTSS(address newbcStakingTSS) onlyAdmin external {
-        bcStakingTSS = newbcStakingTSS;
+    function setBCStakingTSS(address newBCStakingTSS) onlyAdmin external {
+        bcStakingTSS = newBCStakingTSS;
     }
 
     function setStakingRewardVault(address newStakingRewardVault) onlyAdmin external {
@@ -239,12 +246,16 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function setStakingReward(uint256[] memory rewards, address[] memory stakers) whenNotPaused external returns(bool) {
-        require(msg.sender == stakingRewardMaintainer, "only stakingRewardMaintainer is allowed");
+    function setStakingReward(uint256[] memory rewards, address[] memory stakers) onlyRewardMaintainer whenNotPaused external returns(bool) {
         require(rewards.length==stakers.length, "rewards length must equal to stakers length");
         for(uint256 idx=0; idx<rewards.length; idx++){
             stakingReward[stakers[idx]] = stakingReward[stakers[idx]].add(rewards[idx]);
         }
+        return true;
+    }
+
+    function updateRewardPerStaking(uint256 newRewardPerStaking) onlyRewardMaintainer whenNotPaused external returns(bool) {
+        rewardPerStaking = newRewardPerStaking;
         return true;
     }
 }
