@@ -143,7 +143,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     }
 
     function acceptAdmin() external {
-        require(msg.sender == pendingAdmin, "Timelock::acceptAdmin: Call must come from pendingAdmin.");
+        require(msg.sender == pendingAdmin, "StakingBNBAgent::acceptAdmin: Call must come from pendingAdmin.");
         admin = msg.sender;
         pendingAdmin = address(0);
 
@@ -151,7 +151,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     }
 
     function setPendingAdmin(address pendingAdmin_) external {
-        require(msg.sender == address(this), "Timelock::setPendingAdmin: Call must come from Timelock.");
+        require(msg.sender == address(this), "StakingBNBAgent::setPendingAdmin: Call must come from admin.");
         pendingAdmin = pendingAdmin_;
 
         emit NewPendingAdmin(pendingAdmin);

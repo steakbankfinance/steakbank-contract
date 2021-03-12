@@ -6,7 +6,7 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 contract UnstakeVault is IVault, ReentrancyGuard {
     address payable public stakeBNBAgent;
 
-    event ReceiveDeposit(address from, uint256 amount);
+    event Deposit(address from, uint256 amount);
     event Withdraw(address recipient, uint256 amount);
 
     constructor(address payable stakeBNBAgentAddr) public {
@@ -14,15 +14,15 @@ contract UnstakeVault is IVault, ReentrancyGuard {
     }
 
     receive() external payable{
-        emit ReceiveDeposit(msg.sender, msg.value);
+        emit Deposit(msg.sender, msg.value);
     }
 
-    modifier onlyFromStakeBNBAgent() {
+    modifier onlyStakeBNBAgent() {
         require(msg.sender == stakeBNBAgent, "only stakeBNBAgent is allowed");
         _;
     }
 
-    function claimBNB(uint256 amount, address payable recipient) nonReentrant onlyFromStakeBNBAgent override external returns(uint256){
+    function claimBNB(uint256 amount, address payable recipient) nonReentrant onlyStakeBNBAgent override external returns(uint256){
         if (address(this).balance < amount) {
             amount = address(this).balance;
         }

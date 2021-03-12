@@ -6,10 +6,9 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 
 contract CommunityTaxVault is IVault, ReentrancyGuard {
 
-    mapping(uint64 => uint256) public communityTaxEachDay;
     address public governor;
 
-    event ReceiveDeposit(address from, uint256 amount);
+    event Deposit(address from, uint256 amount);
     event Withdraw(address recipient, uint256 amount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
@@ -18,7 +17,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     }
 
     receive() external payable{
-        emit ReceiveDeposit(msg.sender, msg.value);
+        emit Deposit(msg.sender, msg.value);
     }
 
     modifier onlyGov() {
@@ -28,12 +27,12 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
 
     function transferGovernorship(address newGovernor) external {
         require(msg.sender == governor, "only governor is allowed");
-        require(newGovernor != address(0), "new governor is the zero address");
+        require(newGovernor != address(0), "new governor is zero address");
         governor = newGovernor;
         emit GovernorshipTransferred(governor, newGovernor);
     }
 
-    function claimBNB(uint256 amount, address payable recipient) onlyGov override external returns(uint256) {
+    function claimBNB(uint256 amount, address payable recipient) nonReentrant onlyGov override external returns(uint256) {
         if (address(this).balance < amount) {
             amount = address(this).balance;
         }
