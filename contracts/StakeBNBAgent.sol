@@ -38,6 +38,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     struct Unstake {
         address payable staker;
         uint256 amount;
+        uint256 timestamp;
     }
     mapping(uint256 => Unstake) public unstakesMap;
     mapping(address => uint256[]) public accountUnstakeSeqsMap;
@@ -88,7 +89,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         _;
     }
 
-    function getMode() public returns (uint8) {
+    function getMode() public view returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
         if (UTCTime<=600 || UTCTime>85800) {
             return BreathePeriod;
@@ -193,7 +194,8 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
         unstakesMap[tailIdx] = Unstake({
             staker: msg.sender,
-            amount: amount
+            amount: amount,
+            timestamp: block.timestamp
         });
         uint256[] storage unstakes = accountUnstakeSeqsMap[msg.sender];
         unstakes.push(tailIdx);
