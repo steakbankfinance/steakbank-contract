@@ -2,13 +2,15 @@
 
 pragma solidity >=0.6.0;
 
+import './Ownable.sol';
+
 import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
 
 import 'openzeppelin-solidity/contracts/GSN/Context.sol';
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
 import 'openzeppelin-solidity/contracts/utils/Address.sol';
 
-contract BEP20 is Context, IBEP20 {
+contract BEP20 is Context, Ownable, IBEP20 {
     using SafeMath for uint256;
     using Address for address;
 
@@ -21,9 +23,6 @@ contract BEP20 is Context, IBEP20 {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor() public {}
 
@@ -31,34 +30,20 @@ contract BEP20 is Context, IBEP20 {
      * @dev sets initials supply and the owner
      */
     function initializeBEP20(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply, address ownerAddr) internal {
+        super.initializeOwner(ownerAddr);
+
         _name = name;
         _symbol = symbol;
         _decimals = decimals;
         _totalSupply = initialSupply;
-        _owner = ownerAddr;
-        _mint(_owner, initialSupply);
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view returns (address) {
-        return _owner;
+        _mint(ownerAddr, initialSupply);
     }
 
     /**
      * @dev Returns the address of the current owner.
      */
     function getOwner() public override view returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner() == _msgSender(), "Ownable: caller is not the owner");
-        _;
+        return owner();
     }
 
     /**
@@ -295,28 +280,6 @@ contract BEP20 is Context, IBEP20 {
             _msgSender(),
             _allowances[account][_msgSender()].sub(amount, 'BEP20: burn amount exceeds allowance')
         );
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
     }
 }
 

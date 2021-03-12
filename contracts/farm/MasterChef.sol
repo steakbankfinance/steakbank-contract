@@ -1,13 +1,12 @@
 pragma solidity 0.6.12;
 
+import '../lib/Ownable.sol';
 import "../interface/IMintBurnToken.sol";
-
-import "./SyrupBar.sol";
+import "../interface/IFarmRewardLock.sol";
 
 import '@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol';
 import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
 import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol';
 
 // import "@nomiclabs/buidler/console.sol";
 
@@ -60,15 +59,15 @@ contract MasterChef is Ownable {
         uint256 accSKBPerShare; // Accumulated CAKEs per share, times 1e12. See below.
     }
 
-    // The CAKE TOKEN!
+    bool public initialized;
+
+    // The SKB TOKEN!
     IMintBurnToken public skb;
-    // The SYRUP TOKEN!
-    SyrupBar public syrup;
-    // Dev address.
-    address public devaddr;
+    // Lock farm reward
+    IFarmRewardLock public farmRewardLock;
     // CAKE tokens created per block.
-    uint256 public cakePerBlock;
-    // Bonus muliplier for early cake makers.
+    uint256 public skbPerBlock;
+    // Bonus muliplier for early SKB makers.
     uint256 public BONUS_MULTIPLIER = 1;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
@@ -86,24 +85,31 @@ contract MasterChef is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(
+    constructor() public {}
+
+    function initialize(
+        address _owner,
         address _lbnb,
         IMintBurnToken _skb,
-        SyrupBar _syrup,
-        address _devaddr,
+        IFarmRewardLock _farmRewardLock,
         uint256 _skbPerBlock,
-        uint256 _startBlock
+        uint256 _startBlock,
+        uint256 _totalAllocPoint
     ) public {
+        require(!initialized, "already initialized");
+        initialized = true;
+
+        super.initializeOwner(_owner);
+
         skb = _skb;
-        syrup = _syrup;
-        devaddr = _devaddr;
-        cakePerBlock = _skbPerBlock;
+        farmRewardLock = _farmRewardLock;
+        skbPerBlock = _skbPerBlock;
         startBlock = _startBlock;
 
         // staking pool
         poolInfo.push(PoolInfo({
             lpToken: IBEP20(_lbnb),
-            allocPoint: 1000,
+            allocPoint: 400,
             lastRewardBlock: startBlock,
             accSKBPerShare: 0
             }));
@@ -193,8 +199,8 @@ contract MasterChef is Ownable {
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 cakeReward = multiplier.mul(cakePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accSKBPerShare = accSKBPerShare.add(cakeReward.mul(1e12).div(lpSupply));
+            uint256 skbReward = multiplier.mul(skbPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accSKBPerShare = accSKBPerShare.add(skbReward.mul(1e12).div(lpSupply));
         }
         return user.amount.mul(accSKBPerShare).div(1e12).sub(user.rewardDebt);
     }
@@ -220,10 +226,8 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 cakeReward = multiplier.mul(cakePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        skb.mintTo(devaddr, cakeReward.div(10));
-        skb.mintTo(address(syrup), cakeReward);
-        pool.accSKBPerShare = pool.accSKBPerShare.add(cakeReward.mul(1e12).div(lpSupply));
+        uint256 skbReward = multiplier.mul(skbPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        pool.accSKBPerShare = pool.accSKBPerShare.add(skbReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
@@ -238,7 +242,7 @@ contract MasterChef is Ownable {
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accSKBPerShare).div(1e12).sub(user.rewardDebt);
             if(pending > 0) {
-                safeSKBTransfer(msg.sender, pending);
+                rewardSKB(msg.sender, pending);
             }
         }
         if (_amount > 0) {
@@ -260,7 +264,7 @@ contract MasterChef is Ownable {
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accSKBPerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0) {
-            safeSKBTransfer(msg.sender, pending);
+            rewardSKB(msg.sender, pending);
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
@@ -268,47 +272,6 @@ contract MasterChef is Ownable {
         }
         user.rewardDebt = user.amount.mul(pool.accSKBPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
-    }
-
-    // Stake CAKE tokens to MasterChef
-    function enterStaking(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        updatePool(0);
-        if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accSKBPerShare).div(1e12).sub(user.rewardDebt);
-            if(pending > 0) {
-                safeSKBTransfer(msg.sender, pending);
-            }
-        }
-        if(_amount > 0) {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accSKBPerShare).div(1e12);
-
-        syrup.mint(msg.sender, _amount);
-        emit Deposit(msg.sender, 0, _amount);
-    }
-
-    // Withdraw CAKE tokens from STAKING.
-    function leaveStaking(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(0);
-        uint256 pending = user.amount.mul(pool.accSKBPerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
-            safeSKBTransfer(msg.sender, pending);
-        }
-        if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accSKBPerShare).div(1e12);
-
-        syrup.burn(msg.sender, _amount);
-        emit Withdraw(msg.sender, 0, _amount);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -321,14 +284,14 @@ contract MasterChef is Ownable {
         user.rewardDebt = 0;
     }
 
-    // Safe cake transfer function, just in case if rounding error causes pool to not have enough CAKEs.
-    function safeSKBTransfer(address _to, uint256 _amount) internal {
-        syrup.safeSKBTransfer(_to, _amount);
-    }
-
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
+    function rewardSKB(address _to, uint256 _amount) internal {
+        // before the startReleaseHeight, 70% SKB reward will be locked.
+        if (block.number <= farmRewardLock.getStartReleaseHeight()) {
+            uint256 lockedAmount = _amount.mul(7).div(10);
+            _amount = _amount.sub(lockedAmount);
+            skb.mintTo(address(farmRewardLock), lockedAmount);
+            farmRewardLock.notifyDeposit(_to, lockedAmount);
+        }
+        skb.mintTo(_to, _amount);
     }
 }
