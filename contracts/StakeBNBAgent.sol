@@ -35,11 +35,19 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
     bool private _paused;
 
+    struct Stake {
+        uint256 amount;
+        uint256 index;
+    }
+
     struct Unstake {
         address payable staker;
         uint256 amount;
         uint256 timestamp;
     }
+    mapping(address => Stake) public stakesMap;
+    address[] stakerList;
+
     mapping(uint256 => Unstake) public unstakesMap;
     mapping(address => uint256[]) public accountUnstakeSeqsMap;
     uint256 public headerIdx;
@@ -184,11 +192,31 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
         IMintBurnToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
+        Stake storage userStake = stakesMap[msg.sender];
+        if (userStake.amount == 0) {
+            stakesMap[msg.sender] = Stake({
+                amount: amount,
+                index: stakerList.length
+            });
+            stakerList.push(msg.sender);
+        } else {
+            userStake.amount = userStake.amount.add(amount/1e10);
+        }
 
         return true;
     }
 
     function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+        Stake memory userStake = stakesMap[msg.sender];
+        require(userStake.amount >= amount, "staking not enough");
+        userStake.amount = userStake.amount.sub(amount);
+        if (userStake.amount == 0) {
+            if (userStake.index != (stakerList.length-1)) {
+                stakerList[userStake.index] = stakerList[stakerList.length-1];
+            }
+            stakerList.pop();
+        }
+
         IERC20(LBNB).safeTransferFrom(msg.sender, address(this), amount);
         IMintBurnToken(LBNB).burn(amount);
 
@@ -240,6 +268,14 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         emit AcceleratedUnstakedBNB(msg.sender, priorUnstake.staker, unstakeIndex);
 
         return true;
+    }
+
+    function getStakerListLength(address addr) external view returns (uint256) {
+        return stakerList.length;
+    }
+
+    function getStakerByIndex(uint256 idx) external view returns (address) {
+        return stakerList[idx];
     }
 
     function getUnstakeSeqsLength(address addr) external view returns (uint256) {
