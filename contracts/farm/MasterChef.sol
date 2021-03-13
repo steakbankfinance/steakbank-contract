@@ -109,7 +109,7 @@ contract MasterChef is Ownable {
         // staking pool
         poolInfo.push(PoolInfo({
             lpToken: IBEP20(_lbnb),
-            allocPoint: 400,
+            allocPoint: 1000,
             lastRewardBlock: startBlock,
             accSKBPerShare: 0
             }));
@@ -140,7 +140,7 @@ contract MasterChef is Ownable {
             lastRewardBlock: lastRewardBlock,
             accSKBPerShare: 0
             }));
-        updateStakingPool();
+        updateLBNBPool();
     }
 
     // Update the given pool's CAKE allocation point. Can only be called by the owner.
@@ -152,18 +152,18 @@ contract MasterChef is Ownable {
         poolInfo[_pid].allocPoint = _allocPoint;
         if (prevAllocPoint != _allocPoint) {
             totalAllocPoint = totalAllocPoint.sub(prevAllocPoint).add(_allocPoint);
-            updateStakingPool();
+            updateLBNBPool();
         }
     }
 
-    function updateStakingPool() internal {
+    function updateLBNBPool() internal {
         uint256 length = poolInfo.length;
         uint256 points = 0;
         for (uint256 pid = 1; pid < length; ++pid) {
             points = points.add(poolInfo[pid].allocPoint);
         }
-        if (points != 0) {
-            points = points.div(3);
+        points = points.div(3);
+        if (points != 0 && points > poolInfo[0].allocPoint) {
             totalAllocPoint = totalAllocPoint.sub(poolInfo[0].allocPoint).add(points);
             poolInfo[0].allocPoint = points;
         }
