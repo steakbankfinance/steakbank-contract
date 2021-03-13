@@ -68,7 +68,7 @@ contract MasterChef is Ownable {
     // CAKE tokens created per block.
     uint256 public skbPerBlock;
     // Bonus muliplier for early SKB makers.
-    uint256 public BONUS_MULTIPLIER = 1;
+    uint256 public BONUS_MULTIPLIER;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
 
@@ -115,7 +115,7 @@ contract MasterChef is Ownable {
             }));
 
         totalAllocPoint = 1000;
-
+        BONUS_MULTIPLIER = 1;
     }
 
     function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
@@ -191,8 +191,8 @@ contract MasterChef is Ownable {
         return _to.sub(_from).mul(BONUS_MULTIPLIER);
     }
 
-    // View function to see pending CAKEs on frontend.
-    function pendingCake(uint256 _pid, address _user) external view returns (uint256) {
+    // View function to see pending SKB on frontend.
+    function pendingSKB(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accSKBPerShare = pool.accSKBPerShare;
@@ -233,9 +233,6 @@ contract MasterChef is Ownable {
 
     // Deposit LP tokens to MasterChef for CAKE allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
-
-        require (_pid != 0, 'deposit CAKE by staking');
-
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -255,8 +252,6 @@ contract MasterChef is Ownable {
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _pid, uint256 _amount) public {
-
-        require (_pid != 0, 'withdraw CAKE by unstaking');
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
