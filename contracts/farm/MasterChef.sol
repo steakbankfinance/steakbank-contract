@@ -93,8 +93,7 @@ contract MasterChef is Ownable {
         IMintBurnToken _skb,
         IFarmRewardLock _farmRewardLock,
         uint256 _skbPerBlock,
-        uint256 _startBlock,
-        uint256 _totalAllocPoint
+        uint256 _startBlock
     ) public {
         require(!initialized, "already initialized");
         initialized = true;

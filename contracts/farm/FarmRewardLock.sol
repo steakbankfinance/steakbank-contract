@@ -63,6 +63,10 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         return true;
     }
 
+    function setMasterChef(address newMasterChef) onlyOwner external {
+        masterChef = newMasterChef;
+    }
+
     function setStartReleaseHeight(uint64 newStartReleaseHeight) onlyOwner external {
         startReleaseHeight = newStartReleaseHeight;
     }
