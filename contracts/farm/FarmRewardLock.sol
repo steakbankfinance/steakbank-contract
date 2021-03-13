@@ -1,5 +1,6 @@
 pragma solidity 0.6.12;
 
+import '../lib/Ownable.sol';
 import "../interface/IFarmRewardLock.sol";
 
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
@@ -8,7 +9,7 @@ import '@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol';
 import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
 import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
 
-contract FarmRewardLock is Context, IFarmRewardLock {
+contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     using SafeMath for uint256;
     using SafeMath for uint64;
     using SafeBEP20 for IBEP20;
@@ -34,7 +35,9 @@ contract FarmRewardLock is Context, IFarmRewardLock {
     function initialize(
         IBEP20 _skb,
         uint64 _startReleaseHeight,
-        uint64 _releasePeriod
+        uint64 _releasePeriod,
+        address _masterChef,
+        address _owner
     ) public {
         require(!initialized, "FarmRewardLock: already initialized");
         initialized = true;
@@ -44,6 +47,8 @@ contract FarmRewardLock is Context, IFarmRewardLock {
         skb = _skb;
         startReleaseHeight= _startReleaseHeight;
         releasePeriod= _releasePeriod;
+        masterChef = _masterChef;
+        super.initializeOwner(_owner);
     }
 
     function getStartReleaseHeight() override external returns (uint64) {
@@ -56,6 +61,14 @@ contract FarmRewardLock is Context, IFarmRewardLock {
 
         emit DepositSKB(user, amount);
         return true;
+    }
+
+    function setStartReleaseHeight(uint64 newStartReleaseHeight) onlyOwner external {
+        startReleaseHeight = newStartReleaseHeight;
+    }
+
+    function setReleasePeriod(uint64 newReleasePeriod) onlyOwner external {
+        releasePeriod = newReleasePeriod;
     }
 
     function unlockedAmount(address userAddr) public view returns (uint256) {

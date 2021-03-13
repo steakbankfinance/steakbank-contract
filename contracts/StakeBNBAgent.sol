@@ -195,7 +195,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         Stake storage userStake = stakesMap[msg.sender];
         if (userStake.amount == 0) {
             stakesMap[msg.sender] = Stake({
-                amount: amount,
+                amount: amount/1e10,
                 index: stakerList.length
             });
             stakerList.push(msg.sender);
@@ -207,12 +207,15 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     }
 
     function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
-        Stake memory userStake = stakesMap[msg.sender];
-        require(userStake.amount >= amount, "staking not enough");
+        Stake storage userStake = stakesMap[msg.sender];
+        require(userStake.amount > 0 && userStake.amount >= amount, "staking not enough");
         userStake.amount = userStake.amount.sub(amount);
         if (userStake.amount == 0) {
             if (userStake.index != (stakerList.length-1)) {
-                stakerList[userStake.index] = stakerList[stakerList.length-1];
+                address lastStaker = stakerList[stakerList.length-1];
+                Stake storage lastUserStake = stakesMap[lastStaker];
+                lastUserStake.index = userStake.index;
+                stakerList[userStake.index] = lastStaker;
             }
             stakerList.pop();
         }
@@ -270,7 +273,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function getStakerListLength(address addr) external view returns (uint256) {
+    function getStakerListLength() external view returns (uint256) {
         return stakerList.length;
     }
 
