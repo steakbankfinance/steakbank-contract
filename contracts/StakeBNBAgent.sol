@@ -180,7 +180,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     function stakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
-        require(amount%1e10==0 && amount>minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
+        require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
         IMintBurnToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
