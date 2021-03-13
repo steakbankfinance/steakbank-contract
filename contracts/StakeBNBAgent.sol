@@ -69,8 +69,13 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     event Unpaused(address account);
     event ReceiveDeposit(address from, uint256 amount);
     event AcceleratedUnstakedBNB(address AcceleratedStaker, address priorStaker, uint256 AcceleratedUnstakeIdx);
+    event Deposit(address from, uint256 amount);
 
     constructor() public {}
+
+    receive() external payable{
+        emit Deposit(msg.sender, msg.value);
+    }
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "only admin is allowed");
@@ -348,6 +353,15 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
     function updateRewardPerStaking(uint256 newRewardPerStaking) onlyRewardMaintainer whenNotPaused external returns(bool) {
         rewardPerStaking = newRewardPerStaking;
+        return true;
+    }
+
+    function resendBNBToBCStakingTSS(uint256 amount) onlyRewardMaintainer whenNotPaused external payable returns(bool) {
+        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
+        require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
+        require(address(this).balance >= amount, "BNB balance of StakeBNBAgent is not enough");
+        require(amount%1e10==0, "amount must be N * 1e10");
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
         return true;
     }
 }
