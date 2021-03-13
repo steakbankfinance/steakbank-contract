@@ -318,9 +318,9 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
             uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[unstake.staker];
             uint256 lastSeq = unstakeSeqs[unstakeSeqs.length-1];
             unstakeSeqs.pop();
-            for(uint256 idex=0; idex < unstakeSeqs.length; idex++) {
-                if (unstakeSeqs[idex]==headerIdx) {
-                    unstakeSeqs[idex] = lastSeq;
+            for(uint256 index=0; index < unstakeSeqs.length; index++) {
+                if (unstakeSeqs[index]==headerIdx) {
+                    unstakeSeqs[index] = lastSeq;
                     break;
                 }
             }
