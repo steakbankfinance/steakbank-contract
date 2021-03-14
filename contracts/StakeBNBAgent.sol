@@ -244,13 +244,12 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function accelerateUnstakedMature(uint256 unstakeIndex) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function accelerateUnstakedMature(uint256 unstakeIndex) nonReentrant whenNotPaused external returns (bool) {
         require(unstakeIndex>headerIdx.add(nonAccelerateLength) && unstakeIndex<=tailIdx, "unstakeIndex is out of accelerate range");
 
         Unstake memory priorUnstake = unstakesMap[unstakeIndex-1];
         Unstake memory unstake = unstakesMap[unstakeIndex];
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
-        require(priorUnstake.staker!=msg.sender, "both unstakes are from the same user");
 
         uint256 skbBurnAmount = unstake.amount.mul(priceToAccelerateUnstake);
         IERC20(SKB).safeTransferFrom(msg.sender, address(this), skbBurnAmount);
@@ -309,7 +308,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return unstakeVault.balance >= totalUnstakeAmount;
     }
 
-    function batchClaimUnstakedBNB(uint256 batchSize) nonReentrant mustInMode(NormalPeriod) whenNotPaused external {
+    function batchClaimUnstakedBNB(uint256 batchSize) nonReentrant whenNotPaused external {
         for(uint256 idx=0; idx < batchSize && headerIdx < tailIdx; idx++) {
             Unstake memory unstake = unstakesMap[headerIdx];
             uint256 unstakeBNBAmount = unstake.amount.mul(1e10);
@@ -336,7 +335,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         }
     }
 
-    function claimStakingReward() nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function claimStakingReward() nonReentrant whenNotPaused external returns (bool) {
         uint256 rewardAmount = stakingReward[msg.sender];
         stakingReward[msg.sender] = 0;
         uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardAmount, msg.sender);
