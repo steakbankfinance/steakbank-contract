@@ -195,18 +195,21 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
-        IMintBurnToken(LBNB).mintTo(msg.sender, amount/1e10); // StakingBNB decimals is 8
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
+
+        amount = amount/1e10;
+        IMintBurnToken(LBNB).mintTo(msg.sender, amount); // StakingBNB decimals is 8
         Stake storage userStake = stakesMap[msg.sender];
         if (userStake.amount == 0) {
             stakesMap[msg.sender] = Stake({
-                amount: amount/1e10,
+                amount: amount,
                 index: stakerList.length
             });
             stakerList.push(msg.sender);
         } else {
-            userStake.amount = userStake.amount.add(amount/1e10);
+            userStake.amount = userStake.amount.add(amount);
         }
+        emit LogStake(msg.sender, amount);
 
         return true;
     }
