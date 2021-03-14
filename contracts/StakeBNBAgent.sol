@@ -56,6 +56,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     mapping(address => uint256) public stakingReward;
 
     uint256 public priceToAccelerateUnstake;
+    uint256 public nonAccelerateLength; // TODO remove this useless variable
 
     uint256 public rewardPerStaking;
 
