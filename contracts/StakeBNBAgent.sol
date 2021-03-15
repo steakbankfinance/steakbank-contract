@@ -372,6 +372,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
 
     function claimStakingReward() nonReentrant whenNotPaused external returns (bool) {
         uint256 rewardAmount = stakingReward[msg.sender];
+        require(rewardAmount>0, "no staking reward");
         stakingReward[msg.sender] = 0;
         uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardAmount, msg.sender);
         if (rewardAmount > actualAmount) {
