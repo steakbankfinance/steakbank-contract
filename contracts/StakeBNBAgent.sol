@@ -102,6 +102,18 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         _;
     }
 
+    modifier notContract() {
+        require(!isContract(msg.sender), "contract is not allowed");
+        require(msg.sender == tx.origin, "no proxy contract is allowed");
+        _;
+    }
+
+    function isContract(address addr) internal view returns (bool) {
+        uint size;
+        assembly { size := extcodesize(addr) }
+        return size > 0;
+    }
+
     function getMode() public view returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
         if (UTCTime<=600 || UTCTime>85800) {
@@ -184,7 +196,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
-    function stakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
+    function stakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
         require(msg.value == amount + miniRelayFee, "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
@@ -208,7 +220,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function unstakeBNB(uint256 amount) nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function unstakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         Stake storage userStake = stakesMap[msg.sender];
         require(userStake.amount > 0 && userStake.amount >= amount, "staking not enough");
         userStake.amount = userStake.amount.sub(amount);
@@ -238,9 +250,23 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps) nonReentrant whenNotPaused external returns (bool) {
+    function estimateSKBCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256) {
+        if (steps == 0) return 0;
+        if (unstakeIndex<steps) return 0;
+        if ((unstakeIndex-steps)<headerIdx || unstakeIndex>=tailIdx) return 0;
+
+        Unstake memory unstake = unstakesMap[unstakeIndex];
+        uint256 skbBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        for (uint256 idx = unstakeIndex-1 ; idx >= unstakeIndex.sub(steps); idx--) {
+            Unstake memory priorUnstake = unstakesMap[idx];
+            skbBurnAmount = skbBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
+        }
+        return skbBurnAmount;
+    }
+
+    function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps, uint256 skbMaxCost) nonReentrant whenNotPaused external returns (bool) {
         require(steps > 0, "accelerate steps must be greater than zero");
-        require(unstakeIndex.sub(steps)>=headerIdx && unstakeIndex<=tailIdx, "unstakeIndex is out of valid accelerate range");
+        require(unstakeIndex.sub(steps)>=headerIdx && unstakeIndex<tailIdx, "unstakeIndex is out of valid accelerate range");
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
@@ -274,6 +300,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         }
         require(found, "failed to find matched unstake sequence");
 
+        require(skbBurnAmount<=skbMaxCost, "cost too much SKB");
         IERC20(SKB).safeTransferFrom(msg.sender, address(this), skbBurnAmount);
         IMintBurnToken(SKB).burn(skbBurnAmount);
 
