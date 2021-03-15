@@ -9,13 +9,13 @@ npm install
 ## Run unittests
 
 ```shell
-npm run test
+npm run truffle:test
 ```
 
 ## Compile
 
 ```shell
-npm run compile
+npm run truffle:compile
 ```
 
 ## Flatten
