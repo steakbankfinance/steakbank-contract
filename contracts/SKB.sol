@@ -2,15 +2,12 @@ pragma solidity 0.6.12;
 
 import "./lib/BEP20.sol";
 import "./interface/IMintBurnToken.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
 // SKBToken with Governance.
-contract SKBImpl is IMintBurnToken, BEP20, Initializable {
+contract SKB is IMintBurnToken, BEP20 {
 
-    constructor() public {}
-
-    function initialize(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply, address ownerAddr) public initializer {
-        super.initializeBEP20(name, symbol, decimals, initialSupply, ownerAddr);
+    constructor(address ownerAddr) public {
+        super.initializeBEP20("Staking BNB Token", "SKB", 18, 1000000e18, ownerAddr);
     }
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
