@@ -2,14 +2,11 @@ pragma solidity 0.6.12;
 
 import "./lib/BEP20.sol";
 import "./interface/IMintBurnToken.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
-contract LBNBImpl is BEP20, IMintBurnToken, Initializable {
+contract LBNB is BEP20, IMintBurnToken {
 
-    constructor() public {}
-
-    function initialize(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply, address ownerAddr) public initializer {
-        super.initializeBEP20(name, symbol, decimals, initialSupply, ownerAddr);
+    constructor(address ownerAddr) public {
+        super.initializeBEP20("liquidity Staked BNB", "LBNB", 8, 0, ownerAddr);
     }
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
