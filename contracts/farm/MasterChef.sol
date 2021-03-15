@@ -280,7 +280,7 @@ contract MasterChef is Ownable {
 
     function rewardSKB(address _to, uint256 _amount) internal {
         // before the startReleaseHeight, 70% SKB reward will be locked.
-        if (block.number <= farmRewardLock.getStartReleaseHeight()) {
+        if (block.number <= farmRewardLock.getLockEndHeight()) {
             uint256 lockedAmount = _amount.mul(7).div(10);
             _amount = _amount.sub(lockedAmount);
             skb.mintTo(address(farmRewardLock), lockedAmount);

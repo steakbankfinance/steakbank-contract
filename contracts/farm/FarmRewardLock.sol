@@ -11,19 +11,24 @@ import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
 
 contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     using SafeMath for uint256;
-    using SafeMath for uint64;
     using SafeBEP20 for IBEP20;
 
     bool public initialized;
 
     IBEP20 public skb;
-    uint64 public startReleaseHeight;
-    uint64 public releasePeriod;
+    uint256 public startReleaseHeight;
+    uint256 public releasePeriod;
     address public masterChef;
 
-    mapping(address => uint256) lockedUsersSKB;
+    struct UserLockInfo {
+        uint256 lockedAmount;
+        uint256 unlockedAmount;
+        uint256 lastUpdateHeight;
+    }
 
-    event DepositSKB(address user, uint256 amount);
+    mapping(address => UserLockInfo) public userLockInfos;
+
+    event DepositSKB(address indexed user, uint256 amount);
 
     constructor() public {}
 
@@ -34,8 +39,8 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
 
     function initialize(
         IBEP20 _skb,
-        uint64 _startReleaseHeight,
-        uint64 _releasePeriod,
+        uint256 _startReleaseHeight,
+        uint256 _releasePeriod,
         address _masterChef,
         address _owner
     ) public {
@@ -51,15 +56,62 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         super.initializeOwner(_owner);
     }
 
-    function getStartReleaseHeight() override external returns (uint64) {
-        return startReleaseHeight;
+    function getLockEndHeight() override external view returns (uint256) {
+        return startReleaseHeight.add(releasePeriod);
     }
 
     function notifyDeposit(address user, uint256 amount) onlyMasterChef override external returns (bool){
-        require(block.number<=startReleaseHeight, "FarmRewardLock: should not deposit after startReleaseHeight");
-        lockedUsersSKB[user] = lockedUsersSKB[user].add(amount);
+        require(block.number<=startReleaseHeight.add(releasePeriod), "FarmRewardLock: should not deposit after lockEndHeight");
+
+        UserLockInfo storage lockInfo = userLockInfos[user];
+        if (block.number <= startReleaseHeight) {
+            lockInfo.lockedAmount = lockInfo.lockedAmount.add(amount);
+        } else {
+            uint256 lastUpdateHeight = lockInfo.lastUpdateHeight;
+            if (lastUpdateHeight == 0) {
+                lastUpdateHeight = startReleaseHeight;
+            }
+            uint256 lastRestLockPeriod = startReleaseHeight.add(releasePeriod).sub(lastUpdateHeight);
+            uint256 newUnlockAmount = lockInfo.lockedAmount.mul(block.number-lastUpdateHeight).div(lastRestLockPeriod);
+            lockInfo.unlockedAmount = lockInfo.unlockedAmount.add(newUnlockAmount);
+            lockInfo.lockedAmount = lockInfo.lockedAmount.sub(newUnlockAmount).add(amount);
+            lockInfo.lastUpdateHeight = block.number;
+        }
 
         emit DepositSKB(user, amount);
+        return true;
+    }
+
+    function unlockedAmount(address userAddr) public view returns (uint256, uint256) {
+        if (block.number <= startReleaseHeight) {
+            return (0, 0);
+        } else if (block.number > startReleaseHeight.add(releasePeriod)) {
+            UserLockInfo memory lockInfo = userLockInfos[userAddr];
+            return (lockInfo.unlockedAmount, lockInfo.lockedAmount);
+        }
+        UserLockInfo memory lockInfo = userLockInfos[userAddr];
+
+        uint256 lastUpdateHeight = lockInfo.lastUpdateHeight;
+        if (lastUpdateHeight == 0) {
+            lastUpdateHeight = startReleaseHeight;
+        }
+
+        uint256 lastRestLockPeriod = startReleaseHeight.add(releasePeriod).sub(lastUpdateHeight);
+        uint256 newUnlockAmount = lockInfo.lockedAmount.mul(block.number-lastUpdateHeight).div(lastRestLockPeriod);
+
+        return (lockInfo.unlockedAmount, newUnlockAmount);
+    }
+
+    function claim() external returns (bool){
+        (uint256 alreadyUnlockAmount, uint256 newUnlockAmount) = unlockedAmount(_msgSender());
+        uint256 claimAmount = alreadyUnlockAmount.add(newUnlockAmount);
+        require(claimAmount > 0, "FarmRewardLock: no locked reward");
+        UserLockInfo storage lockInfo = userLockInfos[_msgSender()];
+        lockInfo.lockedAmount = lockInfo.lockedAmount.sub(newUnlockAmount);
+        lockInfo.unlockedAmount = 0;
+        lockInfo.lastUpdateHeight = block.number;
+
+        skb.safeTransfer(_msgSender(), claimAmount);
         return true;
     }
 
@@ -67,26 +119,11 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         masterChef = newMasterChef;
     }
 
-    function setStartReleaseHeight(uint64 newStartReleaseHeight) onlyOwner external {
+    function setStartReleaseHeight(uint256 newStartReleaseHeight) onlyOwner external {
         startReleaseHeight = newStartReleaseHeight;
     }
 
-    function setReleasePeriod(uint64 newReleasePeriod) onlyOwner external {
+    function setReleasePeriod(uint256 newReleasePeriod) onlyOwner external {
         releasePeriod = newReleasePeriod;
-    }
-
-    function unlockedAmount(address userAddr) public view returns (uint256) {
-        if (block.number <= startReleaseHeight) {
-            return 0;
-        } else if (block.number > startReleaseHeight.add(releasePeriod)) {
-            return lockedUsersSKB[userAddr];
-        }
-        return block.number.sub(startReleaseHeight).mul(lockedUsersSKB[userAddr])/releasePeriod;
-    }
-
-    function claim() external returns (bool){
-        require(block.number > startReleaseHeight, "FarmRewardLock: startReleaseHeight is still not reached");
-        skb.safeTransfer(_msgSender(), unlockedAmount(_msgSender()));
-        return true;
     }
 }
