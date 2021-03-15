@@ -72,6 +72,9 @@ contract MasterChef is Ownable {
     // The block number when SKB mining starts.
     uint256 public startBlock;
 
+    uint256 public lockRateMolecular;
+    uint256 public lockRateDenominator;
+
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -84,7 +87,9 @@ contract MasterChef is Ownable {
         IMintBurnToken _skb,
         IFarmRewardLock _farmRewardLock,
         uint256 _skbPerBlock,
-        uint256 _startBlock
+        uint256 _startBlock,
+        uint256 _lockRateMolecular,
+        uint256 _lockRateDenominator
     ) public {
         require(!initialized, "already initialized");
         initialized = true;
@@ -95,6 +100,10 @@ contract MasterChef is Ownable {
         farmRewardLock = _farmRewardLock;
         skbPerBlock = _skbPerBlock;
         startBlock = _startBlock;
+
+        require(_lockRateDenominator>0&&_lockRateDenominator>=_lockRateMolecular, "invalid _lockRateDenominator or _lockRateMolecular");
+        lockRateMolecular = _lockRateMolecular;
+        lockRateDenominator = _lockRateDenominator;
 
         // staking pool
         poolInfo.push(PoolInfo({
@@ -272,11 +281,17 @@ contract MasterChef is Ownable {
     function rewardSKB(address _to, uint256 _amount) internal {
         // before the startReleaseHeight, 70% SKB reward will be locked.
         if (block.number <= farmRewardLock.getLockEndHeight()) {
-            uint256 lockedAmount = _amount.mul(7).div(10);
+            uint256 lockedAmount = _amount.mul(lockRateMolecular).div(lockRateDenominator);
             _amount = _amount.sub(lockedAmount);
             skb.mintTo(address(farmRewardLock), lockedAmount);
             farmRewardLock.notifyDeposit(_to, lockedAmount);
         }
         skb.mintTo(_to, _amount);
+    }
+
+    function setRewardLockRate(uint256 molecular, uint256 denominator) public onlyOwner {
+        require(denominator>0&&denominator>=molecular, "invalid molecular or denominator");
+        lockRateMolecular = molecular;
+        lockRateDenominator = denominator;
     }
 }
