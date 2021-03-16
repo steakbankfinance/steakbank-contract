@@ -61,7 +61,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     }
 
     function notifyDeposit(address user, uint256 amount) onlyMasterChef override external returns (bool){
-        require(block.number<=startReleaseHeight.add(releasePeriod), "FarmRewardLock: should not deposit after lockEndHeight");
+        require(block.number<startReleaseHeight.add(releasePeriod), "FarmRewardLock: should not deposit after lockEndHeight");
 
         UserLockInfo storage lockInfo = userLockInfos[user];
         if (block.number <= startReleaseHeight) {
@@ -85,7 +85,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     function unlockedAmount(address userAddr) public view returns (uint256, uint256) {
         if (block.number <= startReleaseHeight) {
             return (0, 0);
-        } else if (block.number > startReleaseHeight.add(releasePeriod)) {
+        } else if (block.number >= startReleaseHeight.add(releasePeriod)) {
             UserLockInfo memory lockInfo = userLockInfos[userAddr];
             return (lockInfo.unlockedAmount, lockInfo.lockedAmount);
         }
