@@ -344,12 +344,10 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
             if (unstakeVault.balance < unstakeBNBAmount) {
                 return;
             }
+            delete unstakesMap[headerIdx];
             uint256 actualAmount = IVault(unstakeVault).claimBNB(unstakeBNBAmount, unstake.staker);
             require(actualAmount==unstakeBNBAmount, "amount mismatch");
-
             emit MatureUnstake(unstake.staker, unstake.amount, headerIdx);
-
-            delete unstakesMap[headerIdx];
 
             uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[unstake.staker];
             uint256 lastSeq = unstakeSeqs[unstakeSeqs.length-1];
