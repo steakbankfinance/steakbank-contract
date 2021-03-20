@@ -205,7 +205,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 {% if mock %}
-        bcStakingTSS.transfer(amount)
+        address(uint160(bcStakingTSS)).transfer(amount);
 {% else %}
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 {% endif %}
@@ -408,7 +408,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
         require(address(this).balance >= amount, "stakingBank BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
 {% if mock %}
-        bcStakingTSS.transfer(amount)
+        address(uint160(bcStakingTSS)).transfer(amount);
 {% else %}
         ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 {% endif %}

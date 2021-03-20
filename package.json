@@ -6,7 +6,7 @@
   "scripts": {
     "testrpc": "ganache-cli --gasLimit 13000000 -e 100000",
     "truffle": "truffle",
-    "truffle:test": "truffle test",
+    "truffle:test": "node prepare-contract.js --mock true && truffle test",
     "truffle:compile": "truffle compile",
     "truffle:migrate": "truffle migrate",
     "test:ci": "scripts/run-test.sh",
@@ -14,7 +14,6 @@
     "lint:js": "eslint test/**/*.js",
     "lint:sol:fix": "solium -d contracts/ --fix",
     "lint:sol": "solium -d contracts/",
-    "prepare-unittests": "node prepare-contract.js --mock true",
     "prepare-mainnet": "node prepare-contract.js",
     "flatten": "node prepare-contract.js && truffle-flattener contracts/farm/FarmingCenterUpgradeableProxy.sol > flatten/FarmingCenterUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmingCenter.sol > flatten/FarmingCenter.sol && truffle-flattener contracts/farm/FarmRewardUpgradeableProxy.sol > flatten/FarmRewardUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmRewardLock.sol > flatten/FarmRewardLock.sol && truffle-flattener contracts/StakingBankAgentUpgradeableProxy.sol > flatten/StakingBankAgentUpgradeableProxy.sol && truffle-flattener contracts/governance/Timelock.sol > flatten/Timelock.sol && truffle-flattener contracts/governance/Governor.sol > flatten/Governor.sol && truffle-flattener contracts/LBNB.sol > flatten/LBNB.sol && truffle-flattener contracts/SBF.sol > flatten/SBF.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/StakingBankImpl.sol > flatten/StakingBankImpl.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
   },
