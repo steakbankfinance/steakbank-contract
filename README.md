@@ -1,4 +1,4 @@
-# StakingBNB
+# StakingBank
 
 ## Install dependency
 
