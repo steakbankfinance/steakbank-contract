@@ -166,7 +166,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function acceptAdmin() external {
-        require(msg.sender == pendingAdmin, "StakingBNBAgent::acceptAdmin: Call must come from pendingAdmin.");
+        require(msg.sender == pendingAdmin, "StakingBank::acceptAdmin: Call must come from pendingAdmin.");
         admin = msg.sender;
         pendingAdmin = address(0);
 
@@ -174,7 +174,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function setPendingAdmin(address pendingAdmin_) external {
-        require(msg.sender == address(this), "StakingBNBAgent::setPendingAdmin: Call must come from admin.");
+        require(msg.sender == address(this), "StakingBank::setPendingAdmin: Call must come from admin.");
         pendingAdmin = pendingAdmin_;
 
         emit NewPendingAdmin(pendingAdmin);
@@ -206,7 +206,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 
         amount = amount.div(1e10);
-        IMintBurnToken(LBNB).mintTo(msg.sender, amount); // StakingBNB decimals is 8
+        IMintBurnToken(LBNB).mintTo(msg.sender, amount); // LBNB decimals is 8
         Stake storage userStake = stakesMap[msg.sender];
         if (userStake.amount == 0) {
             stakesMap[msg.sender] = Stake({

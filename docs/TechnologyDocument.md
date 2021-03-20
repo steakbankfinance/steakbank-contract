@@ -1,4 +1,4 @@
-# StakingBNB
+# StakingBank
 
 ## Architecture
 
@@ -24,11 +24,11 @@
 
 1. The service hold an address which is controlled by TSS. 
 2. All staked BNB will be transferred to the TSS account by cross chain transfer.
-3. It collects all stake and unstake event from StakingBNBAgent contract.
+3. It collects all stake and unstake event from StakingBank contract.
 4. It will send stake or unstake transactions to BC(Binance Chain) at snapshot period(will be introduced later) from the TSS account. Suppose the total stake amount is 100:BNB and the total unstake amount is 50:BNB, the only 50:BNB will be staked. And the rest of them will be transferred to `UnstakedVault` by cross chain transfer.
 5. It will take a snapshot of stake amount for all users at first height in snapshot period, which is the basement of staking reward calculation.
 6. After UTC 00:00, it will transfer received staking reward to `StakingRewardVault` and transfer matured unstaked BNB to `StakingRewardVault`. Not all staking reward will be distributed to users. 1% of them will be left for staking transaction fee and cross chain fee, and 4% will be transferred to `CommunityTaxVault`.
-7. It will also calculate reward for all stakers and write the reward amounts to `StakingBNBAgent` contract. 
+7. It will also calculate reward for all stakers and write the reward amounts to `StakingBank` contract. 
 
 #### Vaults
 
@@ -42,11 +42,11 @@
 
 ![img](./img/period.png)
 
-1. `Breathe Period`: BC will do some liquidation task at UTC 00:00, `StakingBNBAgent` will reject any users' operations in this period.
+1. `Breathe Period`: BC will do some liquidation task at UTC 00:00, `StakingBank` will reject any users' operations in this period.
 
 2. `Normal Period`: Users are fee to call methods: `stake`, `unstake`, `accelerateUnstakedMature`, `batchClaimUnstakedBNB` and `claimStakingReward`.
 
-3. `Snapshot Stake Period`: `StakingBNBAgent` will reject any users' operations in this period. `BCStakingProxy` will take a snapshot for stake amount of all users at the first height of this period. Then, `BCStakingProxy` will do stake, unstake and restake(redelegate) to achieve better APY.
+3. `Snapshot Stake Period`: `StakingBank` will reject any users' operations in this period. `BCStakingProxy` will take a snapshot for stake amount of all users at the first height of this period. Then, `BCStakingProxy` will do stake, unstake and restake(redelegate) to achieve better APY.
 
 ## Roadmap
 

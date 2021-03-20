@@ -10,7 +10,7 @@ contract SBF is IMintBurnToken, BEP20 {
         super.initializeBEP20("Staking Bank Finance", "SBF", 18, 1000000e18, ownerAddr);
     }
 
-    /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
+    /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (FarmingCenter).
     function mintTo(address _to, uint256 _amount) override external onlyOwner returns (bool){
         _mint(_to, _amount);
         _moveDelegates(address(0), _delegates[_to], _amount);

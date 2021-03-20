@@ -20,9 +20,9 @@ The staking engine for BSC is on BC(Binance Chain). BSC's users have to transfer
 
 3. Require much effort on selecting validators to achieve better APY.
 
-## What is StakingBNB
+## What is StakingBank
 
-StakingBNB is a DeFi platform which can provide better staking BNB service than directly attending the native BSC(Binance Smart Chain) Staking. With StakingBNB, users will get liquidity event after staking and can get staked BNB back much faster. Besides, the StakingBNB will offer the better staking reward APY by dynamically calibrating staking strategy. The most important point is that LBNB can be used in many farming pools which can provide attractive reward.
+StakingBank is a DeFi platform which can provide better staking BNB service than directly attending the native BSC(Binance Smart Chain) Staking. With StakingBank, users will get liquidity event after staking and can get staked BNB back much faster. Besides, the StakingBank will offer the better staking reward APY by dynamically calibrating staking strategy. The most important point is that LBNB can be used in many farming pools which can provide attractive reward.
 
 ### LBNB and SBF
 
@@ -30,7 +30,7 @@ LBNB/BNB is always 1:1 on our platform. A user stake 1:BNB, then 1:LBNB will be 
 
 ### Liquidity
 
-StakingBNB will provide better liquidity by more quick unstake mechanism and LBNB. As we know, native staking mechanism requires more than 7 days to get staked BNB back. However, on our platform, in the most optimistic scenario, users can get their staked BNB back in the second day. On average, users can get staked BNB back in 2 or 3 days. LBNB is the key for providing liquidity. Users can deposit LBNB to farming pool and borrow money with LBNB on other Defi platform.
+StakingBank will provide better liquidity by more quick unstake mechanism and LBNB. As we know, native staking mechanism requires more than 7 days to get staked BNB back. However, on our platform, in the most optimistic scenario, users can get their staked BNB back in the second day. On average, users can get staked BNB back in 2 or 3 days. LBNB is the key for providing liquidity. Users can deposit LBNB to farming pool and borrow money with LBNB on other Defi platform.
 
 ### Better Staking APY
 

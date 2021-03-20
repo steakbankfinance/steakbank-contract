@@ -18,7 +18,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     IBEP20 public sbf;
     uint256 public startReleaseHeight;
     uint256 public releasePeriod;
-    address public masterChef;
+    address public farmingCenter;
 
     struct UserLockInfo {
         uint256 lockedAmount;
@@ -32,8 +32,8 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
 
     constructor() public {}
 
-    modifier onlyMasterChef() {
-        require(masterChef == _msgSender(), 'FarmRewardLock: caller is not masterChef');
+    modifier onlyFarmingCenter() {
+        require(farmingCenter == _msgSender(), 'FarmRewardLock: caller is not farmingCenter');
         _;
     }
 
@@ -41,7 +41,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         IBEP20 _sbf,
         uint256 _startReleaseHeight,
         uint256 _releasePeriod,
-        address _masterChef,
+        address _farmingCenter,
         address _owner
     ) public {
         require(!initialized, "FarmRewardLock: already initialized");
@@ -52,7 +52,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         sbf = _sbf;
         startReleaseHeight= _startReleaseHeight;
         releasePeriod= _releasePeriod;
-        masterChef = _masterChef;
+        farmingCenter = _farmingCenter;
         super.initializeOwner(_owner);
     }
 
@@ -60,7 +60,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         return startReleaseHeight.add(releasePeriod);
     }
 
-    function notifyDeposit(address user, uint256 amount) onlyMasterChef override external returns (bool){
+    function notifyDeposit(address user, uint256 amount) onlyFarmingCenter override external returns (bool){
         require(block.number<startReleaseHeight.add(releasePeriod), "FarmRewardLock: should not deposit after lockEndHeight");
 
         UserLockInfo storage lockInfo = userLockInfos[user];
@@ -115,8 +115,8 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         return true;
     }
 
-    function setMasterChef(address newMasterChef) onlyOwner external {
-        masterChef = newMasterChef;
+    function setFarmingCenter(address newFarmingCenter) onlyOwner external {
+        farmingCenter = newFarmingCenter;
     }
 
     function setStartReleaseHeight(uint256 newStartReleaseHeight) onlyOwner external {
