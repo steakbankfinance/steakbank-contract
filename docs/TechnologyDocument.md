@@ -12,7 +12,7 @@
 
 ![img](./img/unstakequeue.png)
 
-3. `accelerateUnstakedMature`: All pending unstakes will be inserted into the unstake queue. Only after all prior unstakes are fulfilled by the `unstakedBNBVault`, then current one can be claimed. This method can be used to move current unstake to the prior position. During this process, some SKB token from user wallet will be burned and the burn amount is proportional to the unstaked amount.
+3. `accelerateUnstakedMature`: All pending unstakes will be inserted into the unstake queue. Only after all prior unstakes are fulfilled by the `unstakedBNBVault`, then current one can be claimed. This method can be used to move current unstake to the prior position. During this process, some SBF token from user wallet will be burned and the burn amount is proportional to the unstaked amount.
    
 4. `batchClaimUnstakedBNB`: Once there is enough BNB in unstakedBNBVault, anyone can call this method to claim unstaked BNB.
 

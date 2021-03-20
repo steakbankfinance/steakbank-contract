@@ -14,10 +14,10 @@ interface IMigratorChef {
     function migrate(IBEP20 token) external returns (IBEP20);
 }
 
-// MasterChef is the master of SKB. He can make SKB and he is a fair guy.
+// MasterChef is the master of SBF. He can make SBF and he is a fair guy.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a governance smart contract once SKB is sufficiently
+// will be transferred to a governance smart contract once SBF is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
@@ -30,13 +30,13 @@ contract MasterChef is Ownable {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         //
-        // We do some fancy math here. Basically, any point in time, the amount of SKBs
+        // We do some fancy math here. Basically, any point in time, the amount of SBFs
         // entitled to a user but is pending to be distributed is:
         //
-        //   pending reward = (user.amount * pool.accSKBPerShare) - user.rewardDebt
+        //   pending reward = (user.amount * pool.accSBFPerShare) - user.rewardDebt
         //
         // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accSKBPerShare` (and `lastRewardBlock`) gets updated.
+        //   1. The pool's `accSBFPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
         //   3. User's `amount` gets updated.
         //   4. User's `rewardDebt` gets updated.
@@ -45,20 +45,20 @@ contract MasterChef is Ownable {
     // Info of each pool.
     struct PoolInfo {
         IBEP20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. SKBs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that SKBs distribution occurs.
-        uint256 accSKBPerShare; // Accumulated SKBs per share, times 1e12. See below.
+        uint256 allocPoint;       // How many allocation points assigned to this pool. SBFs to distribute per block.
+        uint256 lastRewardBlock;  // Last block number that SBFs distribution occurs.
+        uint256 accSBFPerShare; // Accumulated SBFs per share, times 1e12. See below.
     }
 
     bool public initialized;
 
-    // The SKB TOKEN!
-    IMintBurnToken public skb;
+    // The SBF TOKEN!
+    IMintBurnToken public sbf;
     // Lock farm reward
     IFarmRewardLock public farmRewardLock;
-    // SKB tokens created per block.
-    uint256 public skbPerBlock;
-    // Bonus muliplier for early SKB makers.
+    // SBF tokens created per block.
+    uint256 public sbfPerBlock;
+    // Bonus muliplier for early SBF makers.
     uint256 public BONUS_MULTIPLIER;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
@@ -69,7 +69,7 @@ contract MasterChef is Ownable {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when SKB mining starts.
+    // The block number when SBF mining starts.
     uint256 public startBlock;
 
     uint256 public lockRateMolecular;
@@ -84,9 +84,9 @@ contract MasterChef is Ownable {
     function initialize(
         address _owner,
         address _lbnb,
-        IMintBurnToken _skb,
+        IMintBurnToken _sbf,
         IFarmRewardLock _farmRewardLock,
-        uint256 _skbPerBlock,
+        uint256 _sbfPerBlock,
         uint256 _startBlock,
         uint256 _lockRateMolecular,
         uint256 _lockRateDenominator
@@ -96,9 +96,9 @@ contract MasterChef is Ownable {
 
         super.initializeOwner(_owner);
 
-        skb = _skb;
+        sbf = _sbf;
         farmRewardLock = _farmRewardLock;
-        skbPerBlock = _skbPerBlock;
+        sbfPerBlock = _sbfPerBlock;
         startBlock = _startBlock;
 
         require(_lockRateDenominator>0&&_lockRateDenominator>=_lockRateMolecular, "invalid _lockRateDenominator or _lockRateMolecular");
@@ -110,7 +110,7 @@ contract MasterChef is Ownable {
             lpToken: IBEP20(_lbnb),
             allocPoint: 1000,
             lastRewardBlock: startBlock,
-            accSKBPerShare: 0
+            accSBFPerShare: 0
             }));
 
         totalAllocPoint = 1000;
@@ -137,12 +137,12 @@ contract MasterChef is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accSKBPerShare: 0
+            accSBFPerShare: 0
             }));
         updateLBNBPool();
     }
 
-    // Update the given pool's SKB allocation point. Can only be called by the owner.
+    // Update the given pool's SBF allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
@@ -190,18 +190,18 @@ contract MasterChef is Ownable {
         return _to.sub(_from).mul(BONUS_MULTIPLIER);
     }
 
-    // View function to see pending SKB on frontend.
-    function pendingSKB(uint256 _pid, address _user) external view returns (uint256) {
+    // View function to see pending SBF on frontend.
+    function pendingSBF(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accSKBPerShare = pool.accSKBPerShare;
+        uint256 accSBFPerShare = pool.accSBFPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 skbReward = multiplier.mul(skbPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accSKBPerShare = accSKBPerShare.add(skbReward.mul(1e12).div(lpSupply));
+            uint256 sbfReward = multiplier.mul(sbfPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accSBFPerShare = accSBFPerShare.add(sbfReward.mul(1e12).div(lpSupply));
         }
-        return user.amount.mul(accSKBPerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accSBFPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -225,27 +225,27 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 skbReward = multiplier.mul(skbPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        pool.accSKBPerShare = pool.accSKBPerShare.add(skbReward.mul(1e12).div(lpSupply));
+        uint256 sbfReward = multiplier.mul(sbfPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        pool.accSBFPerShare = pool.accSBFPerShare.add(sbfReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
-    // Deposit LP tokens to MasterChef for SKB allocation.
+    // Deposit LP tokens to MasterChef for SBF allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accSKBPerShare).div(1e12).sub(user.rewardDebt);
+            uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e12).sub(user.rewardDebt);
             if(pending > 0) {
-                rewardSKB(msg.sender, pending);
+                rewardSBF(msg.sender, pending);
             }
         }
         if (_amount > 0) {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accSKBPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -256,15 +256,15 @@ contract MasterChef is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
 
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accSKBPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0) {
-            rewardSKB(msg.sender, pending);
+            rewardSBF(msg.sender, pending);
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accSKBPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -278,15 +278,15 @@ contract MasterChef is Ownable {
         user.rewardDebt = 0;
     }
 
-    function rewardSKB(address _to, uint256 _amount) internal {
-        // before the startReleaseHeight, 70% SKB reward will be locked.
+    function rewardSBF(address _to, uint256 _amount) internal {
+        // before the startReleaseHeight, 70% SBF reward will be locked.
         if (block.number < farmRewardLock.getLockEndHeight()) {
             uint256 lockedAmount = _amount.mul(lockRateMolecular).div(lockRateDenominator);
             _amount = _amount.sub(lockedAmount);
-            skb.mintTo(address(farmRewardLock), lockedAmount);
+            sbf.mintTo(address(farmRewardLock), lockedAmount);
             farmRewardLock.notifyDeposit(_to, lockedAmount);
         }
-        skb.mintTo(_to, _amount);
+        sbf.mintTo(_to, _amount);
     }
 
     function setRewardLockRate(uint256 molecular, uint256 denominator) public onlyOwner {

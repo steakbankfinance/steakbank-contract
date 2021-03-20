@@ -3,11 +3,11 @@ pragma solidity 0.6.12;
 import "./lib/BEP20.sol";
 import "./interface/IMintBurnToken.sol";
 
-// SKBToken with Governance.
-contract SKB is IMintBurnToken, BEP20 {
+// Staking Bank Finance Token
+contract SBF is IMintBurnToken, BEP20 {
 
     constructor(address ownerAddr) public {
-        super.initializeBEP20("Staking BNB Token", "SKB", 18, 1000000e18, ownerAddr);
+        super.initializeBEP20("Staking Bank Finance", "SBF", 18, 1000000e18, ownerAddr);
     }
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
@@ -127,9 +127,9 @@ contract SKB is IMintBurnToken, BEP20 {
         );
 
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "SKB::delegateBySig: invalid signature");
-        require(nonce == nonces[signatory]++, "SKB::delegateBySig: invalid nonce");
-        require(now <= expiry, "SKB::delegateBySig: signature expired");
+        require(signatory != address(0), "SBF::delegateBySig: invalid signature");
+        require(nonce == nonces[signatory]++, "SBF::delegateBySig: invalid nonce");
+        require(now <= expiry, "SBF::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -159,7 +159,7 @@ contract SKB is IMintBurnToken, BEP20 {
     view
     returns (uint256)
     {
-        require(blockNumber < block.number, "SKB::getPriorVotes: not yet determined");
+        require(blockNumber < block.number, "SBF::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -232,7 +232,7 @@ contract SKB is IMintBurnToken, BEP20 {
     )
     internal
     {
-        uint32 blockNumber = safe32(block.number, "SKB::_writeCheckpoint: block number exceeds 32 bits");
+        uint32 blockNumber = safe32(block.number, "SBF::_writeCheckpoint: block number exceeds 32 bits");
 
         if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;

@@ -24,7 +24,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
 
     address public LBNB;
-    address public SKB;
+    address public SBF;
     address public bcStakingTSS;
     address public stakingRewardMaintainer;
     address public stakingRewardVault;
@@ -130,7 +130,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
     function initialize(
         address _admin,
         address _LBNB,
-        address _SKB,
+        address _SBF,
         address _bcStakingTSS,
         address _stakingRewardMaintainer,
         address _stakingRewardVault,
@@ -140,7 +140,7 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         admin = _admin;
 
         LBNB = _LBNB;
-        SKB = _SKB;
+        SBF = _SBF;
 
         bcStakingTSS = _bcStakingTSS;
         stakingRewardMaintainer = _stakingRewardMaintainer;
@@ -252,32 +252,32 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function estimateSKBCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256) {
+    function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256) {
         if (steps == 0) return 0;
         if (unstakeIndex<steps) return 0;
         if ((unstakeIndex-steps)<headerIdx || unstakeIndex>=tailIdx) return 0;
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
-        uint256 skbBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
         for (uint256 idx = unstakeIndex-1 ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
-            skbBurnAmount = skbBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
         }
-        return skbBurnAmount;
+        return sbfBurnAmount;
     }
 
-    function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps, uint256 skbMaxCost) nonReentrant whenNotPaused external returns (bool) {
+    function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps, uint256 sbfMaxCost) nonReentrant whenNotPaused external returns (bool) {
         require(steps > 0, "accelerate steps must be greater than zero");
         require(unstakeIndex.sub(steps)>=headerIdx && unstakeIndex<tailIdx, "unstakeIndex is out of valid accelerate range");
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
 
-        uint256 skbBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
         for (uint256 idx = unstakeIndex-1 ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
             unstakesMap[idx+1] = priorUnstake;
-            skbBurnAmount = skbBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
             uint256[] storage priorUnstakeSeqs = accountUnstakeSeqsMap[priorUnstake.staker];
             bool found = false;
             for(uint256 i=0; i < priorUnstakeSeqs.length; i++) {
@@ -302,9 +302,9 @@ contract StakingBNBAgent is Context, Initializable, ReentrancyGuard {
         }
         require(found, "failed to find matched unstake sequence");
 
-        require(skbBurnAmount<=skbMaxCost, "cost too much SKB");
-        IERC20(SKB).safeTransferFrom(msg.sender, address(this), skbBurnAmount);
-        IMintBurnToken(SKB).burn(skbBurnAmount);
+        require(sbfBurnAmount<=sbfMaxCost, "cost too much SBF");
+        IERC20(SBF).safeTransferFrom(msg.sender, address(this), sbfBurnAmount);
+        IMintBurnToken(SBF).burn(sbfBurnAmount);
 
         emit AcceleratedUnstakedBNB(msg.sender, unstakeIndex);
 

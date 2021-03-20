@@ -24,9 +24,9 @@ The staking engine for BSC is on BC(Binance Chain). BSC's users have to transfer
 
 StakingBNB is a DeFi platform which can provide better staking BNB service than directly attending the native BSC(Binance Smart Chain) Staking. With StakingBNB, users will get liquidity event after staking and can get staked BNB back much faster. Besides, the StakingBNB will offer the better staking reward APY by dynamically calibrating staking strategy. The most important point is that LBNB can be used in many farming pools which can provide attractive reward.
 
-### LBNB and SKB
+### LBNB and SBF
 
-LBNB/BNB is always 1:1 on our platform. A user stake 1:BNB, then 1:LBNB will be minted immediately. On the contrary, a users can call unstake method to burn 1:LBNB to get 1:BNB back. Although, during the unstake process, users can't get their BNB back immediately. SKB is the governance token of our platform. Initially, only a smart part of SKB will be minted. Most SKB will be minted as farming reward.
+LBNB/BNB is always 1:1 on our platform. A user stake 1:BNB, then 1:LBNB will be minted immediately. On the contrary, a users can call unstake method to burn 1:LBNB to get 1:BNB back. Although, during the unstake process, users can't get their BNB back immediately. SBF is the governance token of our platform. Initially, only a smart part of SBF will be minted. Most SBF will be minted as farming reward.
 
 ### Liquidity
 
@@ -45,7 +45,7 @@ There are many factors which will affect staking APY:
 
 ### Farming
 
-Initially, four farming pools will be created. One of the farming pool is for `LBNB`. Another three farming pools are for LP tokens of three pancake swap pairs: `LBNB/BNB`, `LBNB/BUSD`, `SKB/BUSD`. In the first two months, 70% farming reward will be locked, and only 30% will be directly transferred to users' wallets. Since the beginning of the second month, all locked reward will be released linearly. Users are required to claim their released reward actively.
+Initially, four farming pools will be created. One of the farming pool is for `LBNB`. Another three farming pools are for LP tokens of three pancake swap pairs: `LBNB/BNB`, `LBNB/BUSD`, `SBF/BUSD`. In the first two months, 70% farming reward will be locked, and only 30% will be directly transferred to users' wallets. Since the beginning of the second month, all locked reward will be released linearly. Users are required to claim their released reward actively.
 
 ## Detailed Mechanism
 
@@ -61,7 +61,7 @@ When multiple users try to unstake during a period, only all the prior unstakes 
 
 ### AccelerateUnstakedMature
 
-Under some circumstance, some users might want to get staked BNB back as soon as possible. An accelerating mechanism is offered here. Users just need to burn enough SKB and then theirs unstake will be fulfilled with more priorities. The burned SKB amount is proportion to the sum of all prior unstake amounts and the current unstaked amount.
+Under some circumstance, some users might want to get staked BNB back as soon as possible. An accelerating mechanism is offered here. Users just need to burn enough SBF and then theirs unstake will be fulfilled with more priorities. The burned SBF amount is proportion to the sum of all prior unstake amounts and the current unstaked amount.
 
 ### Breathe Time
 

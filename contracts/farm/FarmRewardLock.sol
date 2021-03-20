@@ -15,7 +15,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
 
     bool public initialized;
 
-    IBEP20 public skb;
+    IBEP20 public sbf;
     uint256 public startReleaseHeight;
     uint256 public releasePeriod;
     address public masterChef;
@@ -28,7 +28,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
 
     mapping(address => UserLockInfo) public userLockInfos;
 
-    event DepositSKB(address indexed user, uint256 amount);
+    event DepositSBF(address indexed user, uint256 amount);
 
     constructor() public {}
 
@@ -38,7 +38,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     }
 
     function initialize(
-        IBEP20 _skb,
+        IBEP20 _sbf,
         uint256 _startReleaseHeight,
         uint256 _releasePeriod,
         address _masterChef,
@@ -49,7 +49,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
 
         require(_releasePeriod>0, "FarmRewardLock: releasePeriod must be positive");
 
-        skb = _skb;
+        sbf = _sbf;
         startReleaseHeight= _startReleaseHeight;
         releasePeriod= _releasePeriod;
         masterChef = _masterChef;
@@ -78,7 +78,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
             lockInfo.lastUpdateHeight = block.number;
         }
 
-        emit DepositSKB(user, amount);
+        emit DepositSBF(user, amount);
         return true;
     }
 
@@ -111,7 +111,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         lockInfo.unlockedAmount = 0;
         lockInfo.lastUpdateHeight = block.number;
 
-        skb.safeTransfer(_msgSender(), claimAmount);
+        sbf.safeTransfer(_msgSender(), claimAmount);
         return true;
     }
 
