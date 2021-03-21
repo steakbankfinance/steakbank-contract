@@ -22,6 +22,9 @@ contract('StakingBank Contract', (accounts) => {
         bcStakingTSS = accounts[4];
         player0 = accounts[5];
         player1 = accounts[6];
+        player2 = accounts[7];
+        player3 = accounts[8];
+        player4 = accounts[9];
 
         const stakingBankInst = await StakingBank.deployed();
         const lbnbInst = await LBNB.deployed();
@@ -49,8 +52,30 @@ contract('StakingBank Contract', (accounts) => {
 
         const lbnbTotalSupply = await lbnbInst.totalSupply();
         assert.equal(lbnbTotalSupply.toNumber(), 300000000, "wrong lbnb balance");
+
+        let stakeTx2 = await stakingBankInst.stakeBNB("2500000000000000000", {from: player2, value: 252e16});
+        truffleAssert.eventEmitted(stakeTx2, "LogStake",(ev) => {
+            return ev.staker.toLowerCase() === player2.toLowerCase() && ev.amount.toNumber() === 250000000;
+        });
+        const tssBalance2 = await web3.eth.getBalance(bcStakingTSS);
+        assert.equal(web3.utils.toBN("2500000000000000000").add(web3.utils.toBN(tssBalance1)).eq(web3.utils.toBN(tssBalance2)), true, "wrong bnb balance");
+
+        let stakeTx3 = await stakingBankInst.stakeBNB("3000000000000000000", {from: player3, value: 302e16});
+        truffleAssert.eventEmitted(stakeTx3, "LogStake",(ev) => {
+            return ev.staker.toLowerCase() === player3.toLowerCase() && ev.amount.toNumber() === 300000000;
+        });
+        const tssBalance3 = await web3.eth.getBalance(bcStakingTSS);
+        assert.equal(web3.utils.toBN("3000000000000000000").add(web3.utils.toBN(tssBalance2)).eq(web3.utils.toBN(tssBalance3)), true, "wrong bnb balance");
+
+        let stakeTx4 = await stakingBankInst.stakeBNB("3500000000000000000", {from: player4, value: 352e16});
+        truffleAssert.eventEmitted(stakeTx4, "LogStake",(ev) => {
+            return ev.staker.toLowerCase() === player4.toLowerCase() && ev.amount.toNumber() === 350000000;
+        });
+        const tssBalance4 = await web3.eth.getBalance(bcStakingTSS);
+        assert.equal(web3.utils.toBN("3500000000000000000").add(web3.utils.toBN(tssBalance3)).eq(web3.utils.toBN(tssBalance4)), true, "wrong bnb balance");
     });
 
     it('Unstake', async () => {
+
     });
 });
