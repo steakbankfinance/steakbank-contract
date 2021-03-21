@@ -73,7 +73,8 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
 
     constructor() public {}
 
-    receive() external payable{
+    /* solium-disable-next-line */
+    receive () external payable {
         emit Deposit(msg.sender, msg.value);
     }
 

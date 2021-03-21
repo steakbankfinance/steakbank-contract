@@ -1,12 +1,12 @@
 pragma solidity 0.6.12;
 
-import '../lib/Ownable.sol';
+import "../lib/Ownable.sol";
 import "../interface/IMintBurnToken.sol";
 import "../interface/IFarmRewardLock.sol";
 
-import '@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
+import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 
 // import "@nomiclabs/buidler/console.sol";
 
@@ -14,13 +14,14 @@ interface IMigratorChef {
     function migrate(IBEP20 token) external returns (IBEP20);
 }
 
+
 // FarmingCenter is the master of SBF. He can make SBF and he is a fair guy.
 //
-// Note that it's ownable and the owner wields tremendous power. The ownership
+// Note that it"s ownable and the owner wields tremendous power. The ownership
 // will be transferred to a governance smart contract once SBF is sufficiently
 // distributed and the community can show to govern itself.
 //
-// Have fun reading it. Hopefully it's bug-free. God bless.
+// Have fun reading it. Hopefully it"s bug-free. God bless.
 contract FarmingCenter is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
@@ -35,11 +36,11 @@ contract FarmingCenter is Ownable {
         //
         //   pending reward = (user.amount * pool.accSBFPerShare) - user.rewardDebt
         //
-        // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accSBFPerShare` (and `lastRewardBlock`) gets updated.
+        // Whenever a user deposits or withdraws LP tokens to a pool. Here"s what happens:
+        //   1. The pool"s `accSBFPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
-        //   4. User's `rewardDebt` gets updated.
+        //   3. User"s `amount` gets updated.
+        //   4. User"s `rewardDebt` gets updated.
     }
 
     // Info of each pool.
@@ -90,7 +91,8 @@ contract FarmingCenter is Ownable {
         uint256 _startBlock,
         uint256 _lockRateMolecular,
         uint256 _lockRateDenominator
-    ) public {
+    ) public
+    {
         require(!initialized, "already initialized");
         initialized = true;
 
@@ -142,7 +144,7 @@ contract FarmingCenter is Ownable {
         updateLBNBPool();
     }
 
-    // Update the given pool's SBF allocation point. Can only be called by the owner.
+    // Update the given pool"s SBF allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
@@ -237,7 +239,8 @@ contract FarmingCenter is Ownable {
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e12).sub(user.rewardDebt);
-            if(pending > 0) {
+
+            if (pending > 0) {
                 rewardSBF(msg.sender, pending);
             }
         }
@@ -257,10 +260,12 @@ contract FarmingCenter is Ownable {
 
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
+
+        if (pending > 0) {
             rewardSBF(msg.sender, pending);
         }
-        if(_amount > 0) {
+
+        if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
@@ -280,13 +285,14 @@ contract FarmingCenter is Ownable {
 
     function rewardSBF(address _to, uint256 _amount) internal {
         // before the startReleaseHeight, 70% SBF reward will be locked.
+        uint256 farmingReward = _amount;
         if (block.number < farmRewardLock.getLockEndHeight()) {
-            uint256 lockedAmount = _amount.mul(lockRateMolecular).div(lockRateDenominator);
-            _amount = _amount.sub(lockedAmount);
+            uint256 lockedAmount = farmingReward.mul(lockRateMolecular).div(lockRateDenominator);
+            farmingReward = farmingReward.sub(lockedAmount);
             sbf.mintTo(address(farmRewardLock), lockedAmount);
             farmRewardLock.notifyDeposit(_to, lockedAmount);
         }
-        sbf.mintTo(_to, _amount);
+        sbf.mintTo(_to, farmingReward);
     }
 
     function setRewardLockRate(uint256 molecular, uint256 denominator) public onlyOwner {

@@ -31,7 +31,8 @@ contract Timelock {
         delay = delay_;
     }
 
-    receive() external payable{
+    /* solium-disable-next-line */
+    receive () external payable {
     }
 
     function setDelay(uint delay_) public {

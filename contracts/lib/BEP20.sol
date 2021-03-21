@@ -2,13 +2,13 @@
 
 pragma solidity >=0.6.0;
 
-import './Ownable.sol';
+import "./Ownable.sol";
 
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 
-import 'openzeppelin-solidity/contracts/GSN/Context.sol';
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-import 'openzeppelin-solidity/contracts/utils/Address.sol';
+import "openzeppelin-solidity/contracts/GSN/Context.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 
 contract BEP20 is Context, Ownable, IBEP20 {
     using SafeMath for uint256;
@@ -122,19 +122,20 @@ contract BEP20 is Context, Ownable, IBEP20 {
      * Requirements:
      * - `sender` and `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
-     * - the caller must have allowance for `sender`'s tokens of at least
+     * - the caller must have allowance for `sender`"s tokens of at least
      * `amount`.
      */
     function transferFrom(
         address sender,
         address recipient,
         uint256 amount
-    ) public override returns (bool) {
+    ) public override returns (bool)
+    {
         _transfer(sender, recipient, amount);
         _approve(
             sender,
             _msgSender(),
-            _allowances[sender][_msgSender()].sub(amount, 'BEP20: transfer amount exceeds allowance')
+            _allowances[sender][_msgSender()].sub(amount, "BEP20: transfer amount exceeds allowance")
         );
         return true;
     }
@@ -174,7 +175,7 @@ contract BEP20 is Context, Ownable, IBEP20 {
         _approve(
             _msgSender(),
             spender,
-            _allowances[_msgSender()][spender].sub(subtractedValue, 'BEP20: decreased allowance below zero')
+            _allowances[_msgSender()][spender].sub(subtractedValue, "BEP20: decreased allowance below zero")
         );
         return true;
     }
@@ -197,11 +198,12 @@ contract BEP20 is Context, Ownable, IBEP20 {
         address sender,
         address recipient,
         uint256 amount
-    ) internal {
-        require(sender != address(0), 'BEP20: transfer from the zero address');
-        require(recipient != address(0), 'BEP20: transfer to the zero address');
+    ) internal
+    {
+        require(sender != address(0), "BEP20: transfer from the zero address");
+        require(recipient != address(0), "BEP20: transfer to the zero address");
 
-        _balances[sender] = _balances[sender].sub(amount, 'BEP20: transfer amount exceeds balance');
+        _balances[sender] = _balances[sender].sub(amount, "BEP20: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
     }
@@ -216,7 +218,7 @@ contract BEP20 is Context, Ownable, IBEP20 {
      * - `to` cannot be the zero address.
      */
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), 'BEP20: mint to the zero address');
+        require(account != address(0), "BEP20: mint to the zero address");
 
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
@@ -235,9 +237,9 @@ contract BEP20 is Context, Ownable, IBEP20 {
      * - `account` must have at least `amount` tokens.
      */
     function _burn(address account, uint256 amount) internal {
-        require(account != address(0), 'BEP20: burn from the zero address');
+        require(account != address(0), "BEP20: burn from the zero address");
 
-        _balances[account] = _balances[account].sub(amount, 'BEP20: burn amount exceeds balance');
+        _balances[account] = _balances[account].sub(amount, "BEP20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);
         emit Transfer(account, address(0), amount);
     }
@@ -259,9 +261,10 @@ contract BEP20 is Context, Ownable, IBEP20 {
         address owner,
         address spender,
         uint256 amount
-    ) internal {
-        require(owner != address(0), 'BEP20: approve from the zero address');
-        require(spender != address(0), 'BEP20: approve to the zero address');
+    ) internal
+    {
+        require(owner != address(0), "BEP20: approve from the zero address");
+        require(spender != address(0), "BEP20: approve to the zero address");
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -269,7 +272,7 @@ contract BEP20 is Context, Ownable, IBEP20 {
 
     /**
      * @dev Destroys `amount` tokens from `account`.`amount` is then deducted
-     * from the caller's allowance.
+     * from the caller"s allowance.
      *
      * See {_burn} and {_approve}.
      */
@@ -278,7 +281,7 @@ contract BEP20 is Context, Ownable, IBEP20 {
         _approve(
             account,
             _msgSender(),
-            _allowances[account][_msgSender()].sub(amount, 'BEP20: burn amount exceeds allowance')
+            _allowances[account][_msgSender()].sub(amount, "BEP20: burn amount exceeds allowance")
         );
     }
 }

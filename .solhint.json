@@ -1,0 +1,20 @@
+{
+  "extends": "solhint:recommended",
+  "plugins": [],
+  "rules": {
+    "quotes": ["error", "double"],
+    "no-empty-blocks": "off",
+    "indentation": ["error", 4],
+    "max-len": ["off", 79],
+    "no-constant": ["error"],
+    "security/enforce-explicit-visibility": ["error"],
+    "security/no-block-members": ["warning"],
+    "security/no-inline-assembly": ["warning"],
+    "func-order": "off",
+    "mark-callable-contracts": "off",
+    "compiler-version": "off",
+    "reason-string": "off",
+    "avoid-suicide": "error",
+    "avoid-sha3": "warn"
+  }
+}

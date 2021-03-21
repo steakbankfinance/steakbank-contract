@@ -13,6 +13,7 @@ contract StakingRewardVault is IVault, ReentrancyGuard {
         stakingBank = stakingBankAddr;
     }
 
+    /* solium-disable-next-line */
     receive() external payable{
         emit Deposit(msg.sender, msg.value);
     }

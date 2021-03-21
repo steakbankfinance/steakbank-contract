@@ -73,7 +73,8 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
 
     constructor() public {}
 
-    receive() external payable{
+    /* solium-disable-next-line */
+    receive () external payable {
         emit Deposit(msg.sender, msg.value);
     }
 
@@ -198,12 +199,12 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
 
     function stakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
 
-        uint256 miniRelayFee = 2e16;
+        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
 
-        address(uint160(bcStakingTSS)).transfer(amount);
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 
         amount = amount.div(1e10);
         IMintBurnToken(LBNB).mintTo(msg.sender, amount); // LBNB decimals is 8
@@ -396,13 +397,13 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
 
     function resendBNBToBCStakingTSS(uint256 amount) onlyRewardMaintainer whenNotPaused external payable returns(bool) {
 
-        uint256 miniRelayFee = 2e16;
+        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
         require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
         require(address(this).balance >= amount, "stakingBank BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
 
-        address(uint160(bcStakingTSS)).transfer(amount);
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 
         return true;
     }

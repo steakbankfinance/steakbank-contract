@@ -1,13 +1,14 @@
 pragma solidity 0.6.12;
 
-import '../lib/Ownable.sol';
+import "../lib/Ownable.sol";
 import "../interface/IFarmRewardLock.sol";
 
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 
-import '@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
+import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
+
 
 contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     using SafeMath for uint256;
@@ -33,7 +34,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
     constructor() public {}
 
     modifier onlyFarmingCenter() {
-        require(farmingCenter == _msgSender(), 'FarmRewardLock: caller is not farmingCenter');
+        require(farmingCenter == _msgSender(), "FarmRewardLock: caller is not farmingCenter");
         _;
     }
 
@@ -43,15 +44,16 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         uint256 _releasePeriod,
         address _farmingCenter,
         address _owner
-    ) public {
+    ) public
+    {
         require(!initialized, "FarmRewardLock: already initialized");
         initialized = true;
 
         require(_releasePeriod>0, "FarmRewardLock: releasePeriod must be positive");
 
         sbf = _sbf;
-        startReleaseHeight= _startReleaseHeight;
-        releasePeriod= _releasePeriod;
+        startReleaseHeight = _startReleaseHeight;
+        releasePeriod = _releasePeriod;
         farmingCenter = _farmingCenter;
         super.initializeOwner(_owner);
     }
@@ -60,7 +62,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         return startReleaseHeight.add(releasePeriod);
     }
 
-    function notifyDeposit(address user, uint256 amount) onlyFarmingCenter override external returns (bool){
+    function notifyDeposit(address user, uint256 amount) onlyFarmingCenter override external returns (bool) {
         require(block.number<startReleaseHeight.add(releasePeriod), "FarmRewardLock: should not deposit after lockEndHeight");
 
         UserLockInfo storage lockInfo = userLockInfos[user];
@@ -102,7 +104,7 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         return (lockInfo.unlockedAmount, newUnlockAmount);
     }
 
-    function claim() external returns (bool){
+    function claim() external returns (bool) {
         (uint256 alreadyUnlockAmount, uint256 newUnlockAmount) = unlockedAmount(_msgSender());
         uint256 claimAmount = alreadyUnlockAmount.add(newUnlockAmount);
         require(claimAmount > 0, "FarmRewardLock: no locked reward");
