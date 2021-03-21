@@ -1,6 +1,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
+
 contract Governor {
     /// @notice The name of this contract
     string public constant name = "SBF Governor";
@@ -141,9 +142,9 @@ contract Governor {
 
         uint latestProposalId = latestProposalIds[msg.sender];
         if (latestProposalId != 0) {
-          ProposalState proposersLatestProposalState = state(latestProposalId);
-          require(proposersLatestProposalState != ProposalState.Active, "GovernorAlpha::propose: found an already active proposal");
-          require(proposersLatestProposalState != ProposalState.Pending, "GovernorAlpha::propose: found an already pending proposal");
+            ProposalState proposersLatestProposalState = state(latestProposalId);
+            require(proposersLatestProposalState != ProposalState.Active, "GovernorAlpha::propose: found an already active proposal");
+            require(proposersLatestProposalState != ProposalState.Pending, "GovernorAlpha::propose: found an already pending proposal");
         }
 
         uint startBlock = add256(block.number, votingDelay());

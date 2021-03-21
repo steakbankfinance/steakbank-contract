@@ -10,11 +10,8 @@
     "compile": "truffle compile",
     "migrate": "truffle migrate",
     "coverage": "node prepare-contract.js --mock true && truffle run coverage --network development",
-    "test:ci": "scripts/run-test.sh",
-    "lint": "npm run lint:sol && npm run lint:js",
-    "lint:js": "eslint test/**/*.js",
-    "lint:sol:fix": "solium -d contracts/ --fix",
-    "lint:sol": "solium -d contracts/",
+    "lint": "npm run lint:sol",
+    "lint:sol": "solhint 'contracts/*.sol' && solhint 'contracts/**/*.sol'",
     "prepare-mainnet": "node prepare-contract.js",
     "flatten": "node prepare-contract.js && truffle-flattener contracts/farm/FarmingCenterUpgradeableProxy.sol > flatten/FarmingCenterUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmingCenter.sol > flatten/FarmingCenter.sol && truffle-flattener contracts/farm/FarmRewardUpgradeableProxy.sol > flatten/FarmRewardUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmRewardLock.sol > flatten/FarmRewardLock.sol && truffle-flattener contracts/StakingBankAgentUpgradeableProxy.sol > flatten/StakingBankAgentUpgradeableProxy.sol && truffle-flattener contracts/governance/Timelock.sol > flatten/Timelock.sol && truffle-flattener contracts/governance/Governor.sol > flatten/Governor.sol && truffle-flattener contracts/LBNB.sol > flatten/LBNB.sol && truffle-flattener contracts/SBF.sol > flatten/SBF.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/StakingBankImpl.sol > flatten/StakingBankImpl.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
   },
@@ -26,10 +23,11 @@
     "nunjucks": "^3.2.0",
     "openzeppelin-solidity": "v3.4.1",
     "solidity-bytes-utils": "0.0.8",
+    "truffle": "^5.2.5",
     "truffle-privatekey-provider": "^1.5.0",
-    "solium": "^1.2.5",
     "truffle-assertions": "0.9.2",
     "truffle-flattener": "1.4.4",
+    "solhint": "3.3.4",
     "web3": "1.3.1",
     "await-sleep": "0.0.1",
     "ethereum-input-data-decoder": "0.3.0",
@@ -38,6 +36,13 @@
     "minimist": ">=1.2.3",
     "mem": ">=4.0.0",
     "lodash": ">=4.17.19",
-    "solidity-coverage": "0.7.14"
+    "solidity-coverage": "0.7.14",
+    "eslint": "^6.5.1",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.20.0",
+    "eslint-plugin-mocha-no-only": "^1.1.0",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1"
   }
 }

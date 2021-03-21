@@ -16,7 +16,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         governor = govAddr;
     }
 
-    receive() external payable{
+    receive () external payable {
         emit Deposit(msg.sender, msg.value);
     }
 
