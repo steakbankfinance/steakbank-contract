@@ -76,6 +76,50 @@ contract('StakingBank Contract', (accounts) => {
     });
 
     it('Unstake', async () => {
+        bcStakingTSS = accounts[4];
+        player0 = accounts[5];
+        player1 = accounts[6];
+        player2 = accounts[7];
+        player3 = accounts[8];
+        player4 = accounts[9];
 
+        const stakingBankInst = await StakingBank.deployed();
+        const lbnbInst = await LBNB.deployed();
+
+        await lbnbInst.approve(StakingBank.address, web3.utils.toBN(1e18), {from: player0})
+        const allowance = await lbnbInst.allowance(player0, StakingBank.address);
+        assert.equal(web3.utils.toBN(1e18).eq(web3.utils.toBN(allowance)), true, "wrong allowance");
+
+        let unstakeTx0 = await stakingBankInst.unstakeBNB(web3.utils.toBN(1e8), {from: player0});
+        truffleAssert.eventEmitted(unstakeTx0, "LogUnstake",(ev) => {
+            return ev.staker.toLowerCase() === player0.toLowerCase() && ev.amount.toNumber() === 1e8 && ev.index.toNumber() === 0;
+        });
+
+        const balanceOfPlayer0 = await lbnbInst.balanceOf(player0);
+        assert.equal(web3.utils.toBN(0).eq(web3.utils.toBN(balanceOfPlayer0)), true, "wrong lbnb balance");
+
+        const tailIdx = await stakingBankInst.tailIdx();
+        assert.equal(web3.utils.toBN(1).eq(web3.utils.toBN(tailIdx)), true, "wrong tailIdx");
+
+        const headerIdx = await stakingBankInst.headerIdx();
+        assert.equal(web3.utils.toBN(0).eq(web3.utils.toBN(headerIdx)), true, "wrong headerIdx");
+
+        let isUnstakeMature = await stakingBankInst.isUnstakeMature(headerIdx);
+        assert.equal(isUnstakeMature, false, "wrong isUnstakeMature");
+
+        const transferToUnstakeVaultTx = await web3.eth.sendTransaction({ from: bcStakingTSS, to: UnstakeVault.address, value: web3.utils.toBN(1e18), chainId: 666})
+        // truffleAssert.eventEmitted(transferToUnstakeVaultTx, "Deposit", (ev) => {
+        //     return ev.from.toLowerCase() === bcStakingTSS.toLowerCase() && ev.amount.toNumber() === 1e18;
+        // });
+        const unstakeVaultBalance = await web3.eth.getBalance(UnstakeVault.address)
+        assert.equal(web3.utils.toBN(1e18).eq(web3.utils.toBN(unstakeVaultBalance)), true, "wrong unstakeVaultBalance");
+
+        isUnstakeMature = await stakingBankInst.isUnstakeMature(headerIdx);
+        assert.equal(isUnstakeMature, true, "wrong isUnstakeMature");
+
+        const beforeClaimUnstake = await web3.eth.getBalance(player0);
+        await stakingBankInst.batchClaimUnstakedBNB(1, { from: bcStakingTSS});
+        const afterClaimUnstake = await web3.eth.getBalance(player0);
+        assert.equal(web3.utils.toBN(afterClaimUnstake).sub(web3.utils.toBN(beforeClaimUnstake)).eq(web3.utils.toBN(1e18)), true, "wrong mature unstake amount");
     });
 });
