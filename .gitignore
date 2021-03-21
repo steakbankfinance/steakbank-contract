@@ -18,3 +18,5 @@ node_modules/*
 yarn.lock
 build/*
 flatten/*.sol
+coverage.json
+coverage/*
