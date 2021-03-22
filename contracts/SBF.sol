@@ -3,11 +3,11 @@ pragma solidity 0.6.12;
 import "./lib/BEP20.sol";
 import "./interface/IMintBurnToken.sol";
 
-// Staking Bank Finance Token
+// Stake Bank Finance Token
 contract SBF is IMintBurnToken, BEP20 {
 
     constructor(address ownerAddr) public {
-        super.initializeBEP20("Staking Bank Finance", "SBF", 18, 1000000e18, ownerAddr);
+        super.initializeBEP20("Stake Bank Finance", "SBF", 18, 1000000e18, ownerAddr);
     }
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (FarmingCenter).

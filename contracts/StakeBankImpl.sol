@@ -10,7 +10,7 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 
-contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
+contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -202,7 +202,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 miniRelayFee = 2e16;
 
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
-        require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
+        require(amount%1e10==0 && amount>=minimumStake, "stake amount must be N * 1e10 and be greater than minimumStake");
 
         address(uint160(bcStakingTSS)).transfer(amount);
 
@@ -400,7 +400,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 miniRelayFee = 2e16;
 
         require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
-        require(address(this).balance >= amount, "stakingBank BNB balance is not enough");
+        require(address(this).balance >= amount, "stakeBank BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
 
         address(uint160(bcStakingTSS)).transfer(amount);
