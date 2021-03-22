@@ -400,7 +400,7 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
         require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
-        require(address(this).balance >= amount, "stakingBank BNB balance is not enough");
+        require(address(this).balance >= amount, "stakeBank BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
 
         ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
