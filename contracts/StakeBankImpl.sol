@@ -10,7 +10,7 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 
-contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
+contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -198,18 +198,14 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function stakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
-{% if mock %}
+
         uint256 miniRelayFee = 2e16;
-{% else %}
-        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-{% endif %}
+
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
-        require(amount%1e10==0 && amount>=minimumStake, "staking amount must be N * 1e10 and be greater than minimumStake");
-{% if mock %}
+        require(amount%1e10==0 && amount>=minimumStake, "stake amount must be N * 1e10 and be greater than minimumStake");
+
         address(uint160(bcStakingTSS)).transfer(amount);
-{% else %}
-        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
-{% endif %}
+
         amount = amount.div(1e10);
         IMintBurnToken(LBNB).mintTo(msg.sender, amount); // LBNB decimals is 8
         Stake storage userStake = stakesMap[msg.sender];
@@ -400,19 +396,15 @@ contract StakingBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function resendBNBToBCStakingTSS(uint256 amount) onlyRewardMaintainer whenNotPaused external payable returns(bool) {
-{% if mock %}
+
         uint256 miniRelayFee = 2e16;
-{% else %}
-        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-{% endif %}
+
         require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
         require(address(this).balance >= amount, "stakeBank BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
-{% if mock %}
+
         address(uint160(bcStakingTSS)).transfer(amount);
-{% else %}
-        ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
-{% endif %}
+
         return true;
     }
 }
