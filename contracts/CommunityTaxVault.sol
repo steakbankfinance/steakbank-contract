@@ -7,13 +7,19 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 contract CommunityTaxVault is IVault, ReentrancyGuard {
 
     address public governor;
+    address public lbnbAddr;
+    address public sbfAddr;
+    address public pancakeAddr;
 
     event Deposit(address from, uint256 amount);
     event Withdraw(address recipient, uint256 amount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor(address payable govAddr) public {
-        governor = govAddr;
+    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _pancakeAddr) public {
+        governor = _govAddr;
+        lbnbAddr = _lbnbAddr;
+        sbfAddr = _sbfAddr;
+        pancakeAddr = _pancakeAddr
     }
 
     receive () external payable {
@@ -39,5 +45,9 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         recipient.transfer(amount);
         emit Withdraw(recipient, amount);
         return amount;
+    }
+
+    function buyAndBurnSBF() onlyGov external returns(bool) {
+        return true;
     }
 }

@@ -27,27 +27,23 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     address public SBF;
     address public bcStakingTSS;
     address public stakingRewardMaintainer;
-    address public stakingRewardVault;
-    address public unstakeVault;
+    address payable public communityTaxVault;
+    address payable public stakingRewardVault;
+    address payable public unstakeVault;
 
     address public admin;
     address public pendingAdmin;
 
     bool private _paused;
 
-    struct Stake {
-        uint256 amount;
-        uint256 index;
-    }
-
     struct Unstake {
         address payable staker;
         uint256 amount;
         uint256 timestamp;
     }
-    mapping(address => Stake) public stakesMap;
-    address[] stakerList;
 
+    uint256 public BNBValutSupply;
+    uint256 public lbnbToBNBExchangeRate;
     mapping(uint256 => Unstake) public unstakesMap;
     mapping(address => uint256[]) public accountUnstakeSeqsMap;
     uint256 public headerIdx;
@@ -56,9 +52,10 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     mapping(address => uint256) public stakingReward;
 
     uint256 public priceToAccelerateUnstake;
-    uint256 public nonAccelerateLength; // TODO remove this useless variable
-
-    uint256 public rewardPerStaking;
+    uint256 public stakeFeeMolecular;
+    uint256 public stakeFeeDenominator;
+    uint256 public unstakeFeeMolecular;
+    uint256 public unstakeFeeDenominator;
 
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
@@ -134,22 +131,29 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         address _SBF,
         address _bcStakingTSS,
         address _stakingRewardMaintainer,
-        address _stakingRewardVault,
-        address _unstakeVault,
+        address payable _communityTaxVault,
+        address payable _stakingRewardVault,
+        address payable _unstakeVault,
         uint256 _priceToAccelerateUnstake
     ) external initializer{
         admin = _admin;
 
+        lbnbToBNBExchangeRate = 1;
         LBNB = _LBNB;
         SBF = _SBF;
 
         bcStakingTSS = _bcStakingTSS;
         stakingRewardMaintainer = _stakingRewardMaintainer;
 
+        communityTaxVault = _communityTaxVault;
         stakingRewardVault = _stakingRewardVault;
         unstakeVault = _unstakeVault;
 
         priceToAccelerateUnstake = _priceToAccelerateUnstake;
+        stakeFeeMolecular = 1;
+        stakeFeeDenominator = 1000;
+        unstakeFeeMolecular = 1;
+        unstakeFeeDenominator = 1000;
     }
 
     function paused() public view returns (bool) {
@@ -185,11 +189,15 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         bcStakingTSS = newBCStakingTSS;
     }
 
-    function setStakingRewardVault(address newStakingRewardVault) onlyAdmin external {
+    function setCommunityTaxVault(address payable newCommunityTaxVault) onlyAdmin external {
+        communityTaxVault = newCommunityTaxVault;
+    }
+
+    function setStakingRewardVault(address payable newStakingRewardVault) onlyAdmin external {
         stakingRewardVault = newStakingRewardVault;
     }
 
-    function setUnstakeVault(address newUnstakeVault) onlyAdmin external {
+    function setUnstakeVault(address payable newUnstakeVault) onlyAdmin external {
         unstakeVault = newUnstakeVault;
     }
 
@@ -197,58 +205,65 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
+    function setStakeFeeMolecular(uint256 newStakeFeeMolecular) onlyAdmin external {
+        require(stakeFeeDenominator>newStakeFeeMolecular , "invalid stakeFeeMolecular");
+        stakeFeeMolecular = newStakeFeeMolecular;
+    }
+
+    function setStakeFeeDenominator(uint256 newStakeFeeDenominator) onlyAdmin external {
+        require(newStakeFeeDenominator>stakeFeeMolecular&&newStakeFeeDenominator!=0 , "invalid stakeFeeDenominator");
+        stakeFeeDenominator = newStakeFeeDenominator;
+    }
+
+    function setUnstakeFeeMolecular(uint256 newUnstakeFeeMolecular) onlyAdmin external {
+        require(unstakeFeeDenominator>newUnstakeFeeMolecular , "invalid unstakeFeeMolecular");
+        unstakeFeeMolecular = newUnstakeFeeMolecular;
+    }
+
+    function setUnstakeFeeDenominator(uint256 newUnstakeFeeDenominator) onlyAdmin external {
+        require(newUnstakeFeeDenominator>unstakeFeeMolecular&&newUnstakeFeeDenominator!=0 , "invalid unstakeFeeDenominator");
+        unstakeFeeDenominator = newUnstakeFeeDenominator;
+    }
+
     function stakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
-
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "stake amount must be N * 1e10 and be greater than minimumStake");
 
-        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
+        uint256 stakeFee = amount.mul(stakeFeeMolecular).div(stakeFeeDenominator);
+        communityTaxVault.transfer(stakeFee);
+        uint stakeAmount = amount.sub(stakeFee);
 
-        amount = amount.div(1e10);
-        IMintBurnToken(LBNB).mintTo(msg.sender, amount); // LBNB decimals is 8
-        Stake storage userStake = stakesMap[msg.sender];
-        if (userStake.amount == 0) {
-            stakesMap[msg.sender] = Stake({
-                amount: amount,
-                index: stakerList.length
-            });
-            stakerList.push(msg.sender);
-        } else {
-            userStake.amount = userStake.amount.add(amount);
-        }
-        emit LogStake(msg.sender, amount);
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
+
+        BNBValutSupply = BNBValutSupply.add(stakeAmount);
+        uint256 lbnbAmount = stakeAmount.div(1e10).div(lbnbToBNBExchangeRate); // LBNB decimals is 8
+
+        IMintBurnToken(LBNB).mintTo(msg.sender, lbnbAmount);
+        emit LogStake(msg.sender, lbnbAmount);
 
         return true;
     }
 
     function unstakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
-        Stake storage userStake = stakesMap[msg.sender];
-        require(userStake.amount > 0 && userStake.amount >= amount, "staking not enough");
-        userStake.amount = userStake.amount.sub(amount);
-        if (userStake.amount == 0) {
-            if (userStake.index != (stakerList.length-1)) {
-                address lastStaker = stakerList[stakerList.length-1];
-                Stake storage lastUserStake = stakesMap[lastStaker];
-                lastUserStake.index = userStake.index;
-                stakerList[userStake.index] = lastStaker;
-            }
-            stakerList.pop();
-        }
+        uint256 unstakeFee = amount.mul(unstakeFeeMolecular).div(unstakeFeeDenominator);
+        IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, amount);
 
-        IERC20(LBNB).safeTransferFrom(msg.sender, address(this), amount);
-        IMintBurnToken(LBNB).burn(amount);
+        uint256 unstakeAmount = amount.sub(unstakeFee);
+        IERC20(LBNB).safeTransferFrom(msg.sender, address(this), unstakeAmount);
+        IMintBurnToken(LBNB).burn(unstakeAmount);
 
+        uint256 bnbAmount = unstakeAmount.mul(lbnbToBNBExchangeRate);
+        BNBValutSupply = BNBValutSupply.sub(bnbAmount);
         unstakesMap[tailIdx] = Unstake({
             staker: msg.sender,
-            amount: amount,
+            amount: bnbAmount,
             timestamp: block.timestamp
         });
         uint256[] storage unstakes = accountUnstakeSeqsMap[msg.sender];
         unstakes.push(tailIdx);
 
-        emit LogUnstake(msg.sender, amount, tailIdx);
+        emit LogUnstake(msg.sender, bnbAmount, tailIdx);
         tailIdx++;
         return true;
     }
@@ -312,14 +327,6 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function getStakerListLength() external view returns (uint256) {
-        return stakerList.length;
-    }
-
-    function getStakerByIndex(uint256 idx) external view returns (address) {
-        return stakerList[idx];
-    }
-
     function getUnstakeSeqsLength(address addr) external view returns (uint256) {
         return accountUnstakeSeqsMap[addr].length;
     }
@@ -371,27 +378,13 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         }
     }
 
-    function claimStakingReward() nonReentrant whenNotPaused external returns (bool) {
-        uint256 rewardAmount = stakingReward[msg.sender];
-        require(rewardAmount>0, "no staking reward");
-        stakingReward[msg.sender] = 0;
-        uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardAmount, msg.sender);
-        if (rewardAmount > actualAmount) {
-            stakingReward[msg.sender] = rewardAmount.sub(actualAmount);
-        }
-        return true;
-    }
+    function rebase() onlyRewardMaintainer whenNotPaused external returns(bool) {
+        uint256 rewardVaultBalance = stakingRewardVault.balance;
+        uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardVaultBalance, unstakeVault);
+        require(rewardVaultBalance==actualAmount, "reward amount mismatch");
 
-    function setStakingReward(uint256[] memory rewards, address[] memory stakers) onlyRewardMaintainer whenNotPaused external returns(bool) {
-        require(rewards.length==stakers.length, "rewards length must equal to stakers length");
-        for(uint256 idx=0; idx<rewards.length; idx++){
-            stakingReward[stakers[idx]] = stakingReward[stakers[idx]].add(rewards[idx]);
-        }
-        return true;
-    }
-
-    function updateRewardPerStaking(uint256 newRewardPerStaking) onlyRewardMaintainer whenNotPaused external returns(bool) {
-        rewardPerStaking = newRewardPerStaking;
+        uint256 lbnbTotalSupply = IERC20(LBNB).totalSupply();
+        lbnbToBNBExchangeRate = BNBValutSupply.add(rewardVaultBalance).div(lbnbTotalSupply);
         return true;
     }
 
