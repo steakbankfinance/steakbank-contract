@@ -49,6 +49,10 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         return amount;
     }
 
+    function setPancakeRouterAddr(address newPancakeRouterAddr) onlyGov external {
+        pancakeRouterAddr = newPancakeRouterAddr;
+    }
+
     function buyAndBurnSBFWithBNB() nonReentrant onlyGov external returns(bool) {
         // TODO call pancake swap to buy SBF with BNB, then burn SBF
         return true;

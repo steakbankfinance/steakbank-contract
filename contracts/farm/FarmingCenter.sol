@@ -48,7 +48,7 @@ contract FarmingCenter is Ownable {
         IBEP20 lpToken;           // Address of LP token contract.
         uint256 allocPoint;       // How many allocation points assigned to this pool. SBFs to distribute per block.
         uint256 lastRewardBlock;  // Last block number that SBFs distribution occurs.
-        uint256 accSBFPerShare; // Accumulated SBFs per share, times 1e12. See below.
+        uint256 accSBFPerShare; // Accumulated SBFs per share, times 1e18. See below.
     }
 
     bool public initialized;
@@ -201,9 +201,9 @@ contract FarmingCenter is Ownable {
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 sbfReward = multiplier.mul(sbfPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accSBFPerShare = accSBFPerShare.add(sbfReward.mul(1e12).div(lpSupply));
+            accSBFPerShare = accSBFPerShare.add(sbfReward.mul(1e18).div(lpSupply));
         }
-        return user.amount.mul(accSBFPerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accSBFPerShare).div(1e18).sub(user.rewardDebt);
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -228,7 +228,7 @@ contract FarmingCenter is Ownable {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 sbfReward = multiplier.mul(sbfPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        pool.accSBFPerShare = pool.accSBFPerShare.add(sbfReward.mul(1e12).div(lpSupply));
+        pool.accSBFPerShare = pool.accSBFPerShare.add(sbfReward.mul(1e18).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
@@ -238,7 +238,7 @@ contract FarmingCenter is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e12).sub(user.rewardDebt);
+            uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e18).sub(user.rewardDebt);
 
             if (pending > 0) {
                 rewardSBF(msg.sender, pending);
@@ -248,7 +248,7 @@ contract FarmingCenter is Ownable {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e18);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -259,7 +259,7 @@ contract FarmingCenter is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
 
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e18).sub(user.rewardDebt);
 
         if (pending > 0) {
             rewardSBF(msg.sender, pending);
@@ -269,7 +269,7 @@ contract FarmingCenter is Ownable {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e18);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 

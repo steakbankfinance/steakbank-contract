@@ -27,7 +27,7 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(FarmingCenter);
 
     await deployer.deploy(LBNB, StakeBank.address);
-    await deployer.deploy(SBF, deployerAccount);
+    await deployer.deploy(SBF, initialGov);
 
     await deployer.deploy(MockPancakeRouter, LBNB.address, SBF.address);
 

@@ -19,9 +19,9 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
     uint8 constant public  BreathePeriod = 0;
     uint8 constant public  NormalPeriod = 1;
-    uint8 constant public  SnapshotPeriod = 2;
 
     uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
+    uint256 public constant exchangeRatePrecision = 1e9;
 
     address public LBNB;
     address public SBF;
@@ -59,9 +59,10 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
-    event LogStake(address indexed staker, uint256 amount);
-    event LogUnstake(address indexed staker, uint256 amount, uint256 index);
-    event MatureUnstake(address indexed staker, uint256 amount, uint256 index);
+    event LogStake(address indexed staker, uint256 lbnbAmount, uint256 bnbAmount);
+    event LogUnstake(address indexed staker, uint256 lbnbAmount, uint256 bnbAmount, uint256 index);
+    event ClaimedUnstake(address indexed staker, uint256 amount, uint256 index);
+    event LogUpdateLBNBToBNBExchangeRate(uint256 LBNBTotalSupply, uint256 LBNBMarketCapacityCountByBNB, uint256 LBNBToBNBExchangeRate);
     event Paused(address account);
     event Unpaused(address account);
     event ReceiveDeposit(address from, uint256 amount);
@@ -114,12 +115,8 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
     function getMode() public view returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
-        if (UTCTime<=600 || UTCTime>85800) {
+        if (UTCTime<=600 || UTCTime>85200) {
             return BreathePeriod;
-        } else if (UTCTime <= 84600 && UTCTime > 600) {
-            return NormalPeriod;
-        } else if (UTCTime <= 85800 && UTCTime > 84600){
-            return SnapshotPeriod;
         } else {
             return NormalPeriod;
         }
@@ -138,7 +135,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     ) external initializer{
         admin = _admin;
 
-        lbnbToBNBExchangeRate = 1;
+        lbnbToBNBExchangeRate = exchangeRatePrecision;
         LBNB = _LBNB;
         SBF = _SBF;
 
@@ -236,7 +233,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         communityTaxVault.transfer(stakeFee);
         uint256 stakeAmount = amount.sub(stakeFee);
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(stakeAmount);
-        uint256 lbnbAmount = stakeAmount.div(lbnbToBNBExchangeRate);
+        uint256 lbnbAmount = stakeAmount.mul(exchangeRatePrecision).div(lbnbToBNBExchangeRate);
 
         uint256 stakeAmountDust = stakeAmount.mod(1e10);
         if (stakeAmountDust != 0) {
@@ -247,7 +244,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(stakeAmount)}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
 
         IMintBurnToken(LBNB).mintTo(msg.sender, lbnbAmount);
-        emit LogStake(msg.sender, lbnbAmount);
+        emit LogStake(msg.sender, lbnbAmount, stakeAmount);
 
         return true;
     }
@@ -260,7 +257,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         IERC20(LBNB).safeTransferFrom(msg.sender, address(this), unstakeAmount);
         IMintBurnToken(LBNB).burn(unstakeAmount);
 
-        uint256 bnbAmount = unstakeAmount.mul(lbnbToBNBExchangeRate);
+        uint256 bnbAmount = unstakeAmount.mul(lbnbToBNBExchangeRate).div(exchangeRatePrecision);
         bnbAmount = bnbAmount.sub(bnbAmount.mod(1e10));
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.sub(bnbAmount);
         unstakesMap[tailIdx] = Unstake({
@@ -271,7 +268,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         uint256[] storage unstakes = accountUnstakeSeqsMap[msg.sender];
         unstakes.push(tailIdx);
 
-        emit LogUnstake(msg.sender, bnbAmount, tailIdx);
+        emit LogUnstake(msg.sender, unstakeAmount, bnbAmount, tailIdx);
         tailIdx++;
         return true;
     }
@@ -365,7 +362,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
             delete unstakesMap[headerIdx];
             uint256 actualAmount = IVault(unstakeVault).claimBNB(unstakeBNBAmount, unstake.staker);
             require(actualAmount==unstakeBNBAmount, "amount mismatch");
-            emit MatureUnstake(unstake.staker, unstake.amount, headerIdx);
+            emit ClaimedUnstake(unstake.staker, unstake.amount, headerIdx);
 
             uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[unstake.staker];
             uint256 lastSeq = unstakeSeqs[unstakeSeqs.length-1];
@@ -395,10 +392,11 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 lbnbTotalSupply = IERC20(LBNB).totalSupply();
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(rewardVaultBalance);
         if (lbnbTotalSupply == 0) {
-            lbnbToBNBExchangeRate = 1;
+            lbnbToBNBExchangeRate = exchangeRatePrecision;
         } else {
-            lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.div(lbnbTotalSupply);
+            lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.mul(exchangeRatePrecision).div(lbnbTotalSupply);
         }
+        emit LogUpdateLBNBToBNBExchangeRate(lbnbTotalSupply, lbnbMarketCapacityCountByBNB, lbnbToBNBExchangeRate);
         return true;
     }
 
