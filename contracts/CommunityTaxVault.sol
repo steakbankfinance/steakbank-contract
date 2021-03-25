@@ -9,17 +9,17 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     address public governor;
     address public lbnbAddr;
     address public sbfAddr;
-    address public pancakeAddr;
+    address public pancakeRouterAddr;
 
     event Deposit(address from, uint256 amount);
     event Withdraw(address recipient, uint256 amount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _pancakeAddr) public {
+    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _pancakeRouterAddr) public {
         governor = _govAddr;
         lbnbAddr = _lbnbAddr;
         sbfAddr = _sbfAddr;
-        pancakeAddr = _pancakeAddr
+        pancakeRouterAddr = _pancakeRouterAddr;
     }
 
     receive () external payable {
@@ -47,7 +47,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         return amount;
     }
 
-    function buyAndBurnSBF() onlyGov external returns(bool) {
+    function buyAndBurnSBF() nonReentrant onlyGov external returns(bool) {
         return true;
     }
 }

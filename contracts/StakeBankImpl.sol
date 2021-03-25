@@ -42,7 +42,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 timestamp;
     }
 
-    uint256 public BNBValutSupply;
+    uint256 public lbnbMarketCapacityCountByBNB;
     uint256 public lbnbToBNBExchangeRate;
     mapping(uint256 => Unstake) public unstakesMap;
     mapping(address => uint256[]) public accountUnstakeSeqsMap;
@@ -226,7 +226,9 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function stakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
+
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
+
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "stake amount must be N * 1e10 and be greater than minimumStake");
 
@@ -236,8 +238,8 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
         ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
 
-        BNBValutSupply = BNBValutSupply.add(stakeAmount);
-        uint256 lbnbAmount = stakeAmount.div(1e10).div(lbnbToBNBExchangeRate); // LBNB decimals is 8
+        lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(stakeAmount);
+        uint256 lbnbAmount = stakeAmount.div(lbnbToBNBExchangeRate);
 
         IMintBurnToken(LBNB).mintTo(msg.sender, lbnbAmount);
         emit LogStake(msg.sender, lbnbAmount);
@@ -254,7 +256,8 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         IMintBurnToken(LBNB).burn(unstakeAmount);
 
         uint256 bnbAmount = unstakeAmount.mul(lbnbToBNBExchangeRate);
-        BNBValutSupply = BNBValutSupply.sub(bnbAmount);
+        bnbAmount = bnbAmount.sub(bnbAmount.mod(1e10));
+        lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.sub(bnbAmount);
         unstakesMap[tailIdx] = Unstake({
             staker: msg.sender,
             amount: bnbAmount,
@@ -342,7 +345,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 totalUnstakeAmount = 0;
         for(uint256 idx=headerIdx; idx <= unstakeSeq; idx++) {
             Unstake memory unstake = unstakesMap[idx];
-            totalUnstakeAmount=totalUnstakeAmount.add(unstake.amount.mul(1e10));
+            totalUnstakeAmount=totalUnstakeAmount.add(unstake.amount);
         }
         return unstakeVault.balance >= totalUnstakeAmount;
     }
@@ -350,7 +353,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     function batchClaimUnstakedBNB(uint256 batchSize) nonReentrant whenNotPaused external {
         for(uint256 idx=0; idx < batchSize && headerIdx < tailIdx; idx++) {
             Unstake memory unstake = unstakesMap[headerIdx];
-            uint256 unstakeBNBAmount = unstake.amount.mul(1e10);
+            uint256 unstakeBNBAmount = unstake.amount;
             if (unstakeVault.balance < unstakeBNBAmount) {
                 return;
             }
@@ -384,7 +387,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         require(rewardVaultBalance==actualAmount, "reward amount mismatch");
 
         uint256 lbnbTotalSupply = IERC20(LBNB).totalSupply();
-        lbnbToBNBExchangeRate = BNBValutSupply.add(rewardVaultBalance).div(lbnbTotalSupply);
+        lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.add(rewardVaultBalance).div(lbnbTotalSupply);
         return true;
     }
 
