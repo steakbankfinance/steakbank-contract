@@ -6,9 +6,9 @@
   "scripts": {
     "testrpc": "ganache-cli --gasLimit 13000000 -e 100000 --networkId 666",
     "truffle": "truffle",
-    "test": "node prepare-contract.js --mock true && truffle test",
     "compile": "truffle compile",
     "migrate": "truffle migrate",
+    "test": "node prepare-contract.js --mock true && truffle test",
     "coverage": "node prepare-contract.js --mock true && truffle run coverage --network development",
     "lint": "npm run lint:sol",
     "lint:sol": "solhint 'contracts/*.sol' && solhint 'contracts/**/*.sol'",
