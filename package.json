@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "testrpc": "ganache-cli --gasLimit 13000000 -e 100000",
+    "testrpc": "ganache-cli --gasLimit 13000000 -e 100000 --networkId 666",
     "truffle": "truffle",
     "test": "node prepare-contract.js --mock true && truffle test",
     "compile": "truffle compile",

@@ -225,7 +225,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         unstakeFeeDenominator = newUnstakeFeeDenominator;
     }
 
-    function stakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
+    function stake(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
 
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
@@ -234,12 +234,17 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
         uint256 stakeFee = amount.mul(stakeFeeMolecular).div(stakeFeeDenominator);
         communityTaxVault.transfer(stakeFee);
-        uint stakeAmount = amount.sub(stakeFee);
-
-        ITokenHub(TOKENHUB_ADDR).transferOut{value:msg.value}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
-
+        uint256 stakeAmount = amount.sub(stakeFee);
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(stakeAmount);
         uint256 lbnbAmount = stakeAmount.div(lbnbToBNBExchangeRate);
+
+        uint256 stakeAmountDust = stakeAmount.mod(1e10);
+        if (stakeAmountDust != 0) {
+            unstakeVault.transfer(stakeAmountDust);
+            stakeAmount = stakeAmount.sub(stakeAmountDust);
+        }
+
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(stakeAmount)}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
 
         IMintBurnToken(LBNB).mintTo(msg.sender, lbnbAmount);
         emit LogStake(msg.sender, lbnbAmount);
@@ -247,9 +252,9 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function unstakeBNB(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function unstake(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
         uint256 unstakeFee = amount.mul(unstakeFeeMolecular).div(unstakeFeeDenominator);
-        IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, amount);
+        IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, unstakeFee);
 
         uint256 unstakeAmount = amount.sub(unstakeFee);
         IERC20(LBNB).safeTransferFrom(msg.sender, address(this), unstakeAmount);
@@ -338,7 +343,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         return accountUnstakeSeqsMap[addr][idx];
     }
 
-    function isUnstakeMature(uint256 unstakeSeq) external view returns (bool) {
+    function isUnstakeClaimable(uint256 unstakeSeq) external view returns (bool) {
         if (unstakeSeq < headerIdx || unstakeSeq >= tailIdx) {
             return false;
         }
@@ -350,7 +355,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         return unstakeVault.balance >= totalUnstakeAmount;
     }
 
-    function batchClaimUnstakedBNB(uint256 batchSize) nonReentrant whenNotPaused external {
+    function batchClaimPendingUnstake(uint256 batchSize) nonReentrant whenNotPaused external {
         for(uint256 idx=0; idx < batchSize && headerIdx < tailIdx; idx++) {
             Unstake memory unstake = unstakesMap[headerIdx];
             uint256 unstakeBNBAmount = unstake.amount;
@@ -381,13 +386,19 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         }
     }
 
-    function rebase() onlyRewardMaintainer whenNotPaused external returns(bool) {
+    function rebaseLBNBToBNB() whenNotPaused external returns(bool) {
         uint256 rewardVaultBalance = stakingRewardVault.balance;
+        require(rewardVaultBalance>0, "stakingRewardVault has no BNB");
         uint256 actualAmount = IVault(stakingRewardVault).claimBNB(rewardVaultBalance, unstakeVault);
         require(rewardVaultBalance==actualAmount, "reward amount mismatch");
 
         uint256 lbnbTotalSupply = IERC20(LBNB).totalSupply();
-        lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.add(rewardVaultBalance).div(lbnbTotalSupply);
+        lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(rewardVaultBalance);
+        if (lbnbTotalSupply == 0) {
+            lbnbToBNBExchangeRate = 1;
+        } else {
+            lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.div(lbnbTotalSupply);
+        }
         return true;
     }
 
