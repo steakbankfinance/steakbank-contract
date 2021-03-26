@@ -14,6 +14,7 @@ interface IMigratorChef {
     function migrate(IBEP20 token) external returns (IBEP20);
 }
 
+//TODO implement different reward lock ratio for different pools
 
 // FarmingCenter is the master of SBF. He can make SBF and he is a fair guy.
 //
