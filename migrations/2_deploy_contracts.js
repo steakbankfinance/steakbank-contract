@@ -13,6 +13,9 @@ const FarmingCenter = artifacts.require("FarmingCenter");
 const Governor = artifacts.require("Governor");
 const Timelock = artifacts.require("Timelock");
 
+const MockPancakeRouter = artifacts.require("MockPancakeRouter");
+const BUSDToken = artifacts.require("BUSDToken");
+
 module.exports = function (deployer, network, accounts) {
   deployerAccount = accounts[0];
   initialGov = accounts[1];
@@ -24,12 +27,15 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(FarmRewardLock);
     await deployer.deploy(FarmingCenter);
 
-    await deployer.deploy(CommunityTaxVault, initialGov);
+    await deployer.deploy(LBNB, StakeBank.address);
+    await deployer.deploy(SBF, initialGov);
+
+    await deployer.deploy(MockPancakeRouter, LBNB.address, SBF.address);
+    await deployer.deploy(BUSDToken);
+
+    await deployer.deploy(CommunityTaxVault, initialGov, LBNB.address, SBF.address, BUSDToken.address, MockPancakeRouter.address);
     await deployer.deploy(StakingRewardVault, StakeBank.address);
     await deployer.deploy(UnstakeVault, StakeBank.address);
-
-    await deployer.deploy(LBNB, StakeBank.address);
-    await deployer.deploy(SBF, deployerAccount);
 
     await deployer.deploy(Timelock, initialGov, 5 * 86400);
     await deployer.deploy(Governor, Timelock.address, SBF.address, govGuardian);
@@ -38,7 +44,7 @@ module.exports = function (deployer, network, accounts) {
     const farmRewardLockInst = await FarmRewardLock.deployed();
     const farmingCenterInst = await FarmingCenter.deployed();
 
-    await stakeBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, rewardMaintainer, StakingRewardVault.address, UnstakeVault.address, "100000000000", {from: deployerAccount});
+    await stakeBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, rewardMaintainer, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
     await farmRewardLockInst.initialize(SBF.address, "1000", "100", initialGov, FarmingCenter.address,  {from: deployerAccount});
     await farmingCenterInst.initialize(initialGov, LBNB.address, SBF.address, FarmRewardLock.address, "10000000000000000000", "500", "7", "10", {from: deployerAccount});
   });

@@ -6,7 +6,7 @@ import "./interface/IMintBurnToken.sol";
 contract LBNB is BEP20, IMintBurnToken {
 
     constructor(address ownerAddr) public {
-        super.initializeBEP20("Liquidity Staked BNB", "LBNB", 8, 0, ownerAddr);
+        super.initializeBEP20("Liquidity Staked BNB", "LBNB", 18, 0, ownerAddr);
     }
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (StakingBank).

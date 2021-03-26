@@ -7,13 +7,23 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 contract CommunityTaxVault is IVault, ReentrancyGuard {
 
     address public governor;
+    address public lbnbAddr;
+    address public sbfAddr;
+    address public busdAddr;
+    address public pancakeRouterAddr;
 
     event Deposit(address from, uint256 amount);
     event Withdraw(address recipient, uint256 amount);
+    event BurnSBFWithBNB(uint256 burnedSBFAmount, uint256 costBNBAmount);
+    event BurnSBFWithLBNB(uint256 burnedSBFAmount, uint256 costLBNBAmount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor(address payable govAddr) public {
-        governor = govAddr;
+    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _busdAddr, address _pancakeRouterAddr) public {
+        governor = _govAddr;
+        lbnbAddr = _lbnbAddr;
+        sbfAddr = _sbfAddr;
+        busdAddr = _busdAddr;
+        pancakeRouterAddr = _pancakeRouterAddr;
     }
 
     receive () external payable {
@@ -39,5 +49,19 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         recipient.transfer(amount);
         emit Withdraw(recipient, amount);
         return amount;
+    }
+
+    function setPancakeRouterAddr(address newPancakeRouterAddr) onlyGov external {
+        pancakeRouterAddr = newPancakeRouterAddr;
+    }
+
+    function buyAndBurnSBFWithBNB() nonReentrant onlyGov external returns(bool) {
+        // TODO call pancake swap to buy SBF with BNB, then burn SBF
+        return true;
+    }
+
+    function buyAndBurnSBFWithLBNB() nonReentrant onlyGov external returns(bool) {
+        // TODO call pancake swap to buy SBF with LBNB, then burn SBF
+        return true;
     }
 }
