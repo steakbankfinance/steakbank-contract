@@ -176,7 +176,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function setPendingAdmin(address pendingAdmin_) external {
-        require(msg.sender == address(this), "StakingBank::setPendingAdmin: Call must come from admin.");
+        require(msg.sender == admin, "StakingBank::setPendingAdmin: Call must come from admin.");
         pendingAdmin = pendingAdmin_;
 
         emit NewPendingAdmin(pendingAdmin);

@@ -44,7 +44,7 @@ module.exports = function (deployer, network, accounts) {
     const farmRewardLockInst = await FarmRewardLock.deployed();
     const farmingCenterInst = await FarmingCenter.deployed();
 
-    await stakeBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, rewardMaintainer, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "100000000000", {from: deployerAccount});
+    await stakeBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, rewardMaintainer, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
     await farmRewardLockInst.initialize(SBF.address, "1000", "100", initialGov, FarmingCenter.address,  {from: deployerAccount});
     await farmingCenterInst.initialize(initialGov, LBNB.address, SBF.address, FarmRewardLock.address, "10000000000000000000", "500", "7", "10", {from: deployerAccount});
   });

@@ -18,7 +18,7 @@ const truffleAssert = require('truffle-assertions');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 contract('StakeBank Contract', (accounts) => {
-    it('Stake', async () => {
+    it('Test Stake', async () => {
         bcStakingTSS = accounts[4];
         player0 = accounts[5];
         player1 = accounts[6];
@@ -96,7 +96,7 @@ contract('StakeBank Contract', (accounts) => {
         assert.equal(web3.utils.toBN("11988000000000000000").eq(web3.utils.toBN(lbnbTotalSupply)), true, "wrong lbnb totalSupply");
     });
 
-    it('Unstake', async () => {
+    it('Test Unstake', async () => {
         bcStakingTSS = accounts[4];
         player0 = accounts[5];
         player1 = accounts[6];
@@ -154,7 +154,10 @@ contract('StakeBank Contract', (accounts) => {
         const afterClaimUnstake = await web3.eth.getBalance(player0);
         assert.equal(web3.utils.toBN(afterClaimUnstake).sub(web3.utils.toBN(beforeClaimUnstake)).eq(web3.utils.toBN("998001000000000000")), true, "wrong claimed unstake amount");
     });
-    it('Add staking reward', async () => {
+    it('Test rebaseLBNBToBNB', async () => {
+        initialGov = accounts[1];
+        rewardMaintainer = accounts[2];
+        govGuardian = accounts[3];
         bcStakingTSS = accounts[4];
         player0 = accounts[5];
         player1 = accounts[6];
@@ -196,32 +199,233 @@ contract('StakeBank Contract', (accounts) => {
             return ev.staker.toLowerCase() === player2.toLowerCase() && ev.lbnbAmount.toString() === "2495002500000000000" && ev.bnbAmount.toString() === "2722027310000000000" && ev.index.toNumber() === 2;
         });
 
+        await lbnbInst.approve(StakeBank.address, web3.utils.toBN("2997000000000000000"), {from: player3})
+        let unstakeTx2 = await stakeBankInst.unstake(web3.utils.toBN("2997000000000000000"), {from: player3});
+        truffleAssert.eventEmitted(unstakeTx2, "LogUnstake",(ev) => {
+            return ev.staker.toLowerCase() === player3.toLowerCase() && ev.lbnbAmount.toString() === "2994003000000000000" && ev.bnbAmount.toString() === "3266432770000000000" && ev.index.toNumber() === 3;
+        });
+
         const headerIdx = await stakeBankInst.headerIdx();
         assert.equal(headerIdx.toNumber(), 1, "wrong headerIdx");
         const tailIdx = await stakeBankInst.tailIdx();
-        assert.equal(tailIdx.toNumber(), 3, "wrong tailIdx");
+        assert.equal(tailIdx.toNumber(), 4, "wrong tailIdx");
 
         let isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(headerIdx);
         assert.equal(isUnstakeClaimable, false, "wrong isUnstakeClaimable");
-        isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(headerIdx);
+        isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(web3.utils.toBN(headerIdx).add(web3.utils.toBN(1)));
+        assert.equal(isUnstakeClaimable, false, "wrong isUnstakeClaimable");
+        isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(web3.utils.toBN(headerIdx).add(web3.utils.toBN(2)));
         assert.equal(isUnstakeClaimable, false, "wrong isUnstakeClaimable");
 
-        await web3.eth.sendTransaction({ from: bcStakingTSS, to: UnstakeVault.address, value: web3.utils.toBN("3899649160000000000"), chainId: 666})
+        await web3.eth.sendTransaction({ from: bcStakingTSS, to: UnstakeVault.address, value: web3.utils.toBN("5166081930000000000"), chainId: 666})
 
         const unstakeVaultBalance = await web3.eth.getBalance(UnstakeVault.address)
-        assert.equal(web3.utils.toBN("4899649160000000000").eq(web3.utils.toBN(unstakeVaultBalance)), true, "wrong unstakeVaultBalance");
+        assert.equal(web3.utils.toBN("6166081930000000000").eq(web3.utils.toBN(unstakeVaultBalance)), true, "wrong unstakeVaultBalance");
 
         isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(headerIdx);
         assert.equal(isUnstakeClaimable, true, "wrong isUnstakeClaimable");
         isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(web3.utils.toBN(headerIdx).add(web3.utils.toBN(1)));
         assert.equal(isUnstakeClaimable, true, "wrong isUnstakeClaimable");
+        isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(web3.utils.toBN(headerIdx).add(web3.utils.toBN(2)));
+        assert.equal(isUnstakeClaimable, false, "wrong isUnstakeClaimable");
+
+        let unstakeLength = await stakeBankInst.getUnstakeSeqsLength(player1);
+        assert.equal(unstakeLength.toString(), "1", "wrong unstake length");
+        unstakeLength = await stakeBankInst.getUnstakeSeqsLength(player2);
+        assert.equal(unstakeLength.toString(), "1", "wrong unstake length");
+        unstakeLength = await stakeBankInst.getUnstakeSeqsLength(player3);
+        assert.equal(unstakeLength.toString(), "1", "wrong unstake length");
+
+        let priceToAccelerateUnstake = await stakeBankInst.priceToAccelerateUnstake();
+        assert.equal(priceToAccelerateUnstake.toString(), "10", "wrong priceToAccelerateUnstake");
+
+        await stakeBankInst.setPriceToAccelerateUnstake(100, {from: initialGov})
+        priceToAccelerateUnstake = await stakeBankInst.priceToAccelerateUnstake();
+        assert.equal(priceToAccelerateUnstake.toString(), "100", "wrong priceToAccelerateUnstake");
+        const costSBFAmount = await stakeBankInst.estimateSBFCostForAccelerate(3, 2);
+
+        await stakeBankInst.setPriceToAccelerateUnstake(10, {from: initialGov})
+        const requiredSBFAmount = await stakeBankInst.estimateSBFCostForAccelerate(3, 2);
+        assert.equal(web3.utils.toBN(requiredSBFAmount).mul(web3.utils.toBN(10)).eq(web3.utils.toBN(costSBFAmount)),  true, "wrong priceToAccelerateUnstake");
+
+        const sbfInst = await SBF.deployed();
+        await sbfInst.transfer(player3, requiredSBFAmount, {from: initialGov});
+        const player3SBFBal = await sbfInst.balanceOf(player3);
+        assert.equal(web3.utils.toBN(player3SBFBal).eq(web3.utils.toBN(requiredSBFAmount)), true, "wrong sbf balance");
+        await sbfInst.approve(StakeBank.address, requiredSBFAmount, {from: player3});
+
+        let firstPlayer3UnstakeIdx = await stakeBankInst.getUnstakeSequence(player3, 0)
+        assert.equal(firstPlayer3UnstakeIdx.toString(), "3", "wrong player3 first unstake index");
+
+        try {
+            await stakeBankInst.accelerateUnstakedMature(3, 2, web3.utils.toBN(requiredSBFAmount).sub(web3.utils.toBN(1)), {from: player3});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("cost too much SBF"));
+        }
+
+        await stakeBankInst.accelerateUnstakedMature(3, 2, requiredSBFAmount, {from: player3});
+        firstPlayer3UnstakeIdx = await stakeBankInst.getUnstakeSequence(player3, 0)
+        assert.equal(firstPlayer3UnstakeIdx.toString(), "1", "wrong player3 first unstake index");
+
+        let firstPlayer2UnstakeIdx = await stakeBankInst.getUnstakeSequence(player2, 0);
+        isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(firstPlayer2UnstakeIdx);
+        assert.equal(isUnstakeClaimable, false, "wrong isUnstakeClaimable");
+
+        await web3.eth.sendTransaction({ from: bcStakingTSS, to: UnstakeVault.address, value: web3.utils.toBN(2e18), chainId: 666})
+
+        isUnstakeClaimable = await stakeBankInst.isUnstakeClaimable(firstPlayer2UnstakeIdx);
+        assert.equal(isUnstakeClaimable, true, "wrong isUnstakeClaimable");
 
         const beforeClaimUnstakePlayer1 = await web3.eth.getBalance(player1);
         const beforeClaimUnstakePlayer2 = await web3.eth.getBalance(player2);
-        await stakeBankInst.batchClaimPendingUnstake(2, { from: bcStakingTSS});
+        const beforeClaimUnstakePlayer3 = await web3.eth.getBalance(player3);
+        await stakeBankInst.batchClaimPendingUnstake(3, { from: bcStakingTSS});
         const afterClaimUnstakePlayer1 = await web3.eth.getBalance(player1);
         const afterClaimUnstakePlayer2 = await web3.eth.getBalance(player2);
+        const afterClaimUnstakePlayer3 = await web3.eth.getBalance(player3);
         assert.equal(web3.utils.toBN(afterClaimUnstakePlayer1).sub(web3.utils.toBN(beforeClaimUnstakePlayer1)).eq(web3.utils.toBN("2177621850000000000")), true, "wrong claimed unstake amount");
         assert.equal(web3.utils.toBN(afterClaimUnstakePlayer2).sub(web3.utils.toBN(beforeClaimUnstakePlayer2)).eq(web3.utils.toBN("2722027310000000000")), true, "wrong claimed unstake amount");
+        assert.equal(web3.utils.toBN(afterClaimUnstakePlayer3).sub(web3.utils.toBN(beforeClaimUnstakePlayer3)).eq(web3.utils.toBN("3266432770000000000")), true, "wrong claimed unstake amount");
+    });
+    it('Test resendBNBToBCStakingTSS', async () => {
+        deployerAccount = accounts[0];
+        rewardMaintainer = accounts[2];
+        bcStakingTSS = accounts[4];
+
+        const stakeBankInst = await StakeBank.deployed();
+
+        await web3.eth.sendTransaction({ from: deployerAccount, to: StakeBank.address, value: web3.utils.toBN(1e18), chainId: 666})
+
+        const beforeResendBCStakingTSS = await web3.eth.getBalance(bcStakingTSS);
+        await stakeBankInst.resendBNBToBCStakingTSS(web3.utils.toBN(1e18), {value:2e16, from: rewardMaintainer});
+        const afterResendBCStakingTSS = await web3.eth.getBalance(bcStakingTSS);
+        assert.equal(web3.utils.toBN(afterResendBCStakingTSS).sub(web3.utils.toBN(beforeResendBCStakingTSS)), "1020000000000000000", "wrong resend result");
+    });
+    it('Test set parameters about fee', async () => {
+        initialGov = accounts[1];
+
+        const stakeBankInst = await StakeBank.deployed();
+
+        try {
+            await stakeBankInst.setStakeFeeMolecular(1001, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("invalid stakeFeeMolecular"));
+        }
+
+        await stakeBankInst.setStakeFeeMolecular(100, {from: initialGov});
+
+        try {
+            await stakeBankInst.setStakeFeeDenominator(90, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("invalid stakeFeeDenominator"));
+        }
+
+        await stakeBankInst.setStakeFeeDenominator(200, {from: initialGov});
+
+        try {
+            await stakeBankInst.setUnstakeFeeMolecular(1001, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("invalid unstakeFeeMolecular"));
+        }
+
+        await stakeBankInst.setUnstakeFeeMolecular(100, {from: initialGov});
+
+        try {
+            await stakeBankInst.setUnstakeFeeDenominator(90, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("invalid unstakeFeeDenominator"));
+        }
+
+        await stakeBankInst.setUnstakeFeeDenominator(200, {from: initialGov});
+
+        await stakeBankInst.setStakeFeeMolecular(1, {from: initialGov});
+        await stakeBankInst.setStakeFeeDenominator(1000, {from: initialGov});
+        await stakeBankInst.setUnstakeFeeMolecular(1, {from: initialGov});
+        await stakeBankInst.setUnstakeFeeDenominator(1000, {from: initialGov});
+    });
+
+    it('Test transfer admin', async () => {
+        deployerAccount = accounts[0];
+        initialGov = accounts[1];
+        rewardMaintainer = accounts[2];
+
+        const stakeBankInst = await StakeBank.deployed();
+
+        try {
+            await stakeBankInst.setPendingAdmin(deployerAccount, {from: rewardMaintainer});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("Call must come from admin"));
+        }
+
+        let admin = await stakeBankInst.admin();
+        assert.equal(admin, initialGov,"wrong admin");
+
+        await stakeBankInst.setPendingAdmin(deployerAccount, {from: initialGov});
+
+        admin = await stakeBankInst.admin();
+        assert.equal(admin, initialGov,"wrong admin");
+
+        let pendingAdmin = await stakeBankInst.pendingAdmin();
+        assert.equal(pendingAdmin, deployerAccount,"wrong pendingAdmin");
+
+        try {
+            await stakeBankInst.acceptAdmin({from: rewardMaintainer});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("Call must come from pendingAdmin"));
+        }
+
+        await stakeBankInst.acceptAdmin({from: deployerAccount});
+        admin = await stakeBankInst.admin();
+        assert.equal(admin, deployerAccount,"wrong admin");
+        pendingAdmin = await stakeBankInst.pendingAdmin();
+        assert.equal(pendingAdmin, "0x0000000000000000000000000000000000000000","wrong pendingAdmin");
+
+        await stakeBankInst.setPendingAdmin(initialGov, {from: deployerAccount});
+        await stakeBankInst.acceptAdmin({from: initialGov});
+    });
+
+    it('Test pause', async () => {
+        deployerAccount = accounts[0];
+        initialGov = accounts[1];
+        player0 = accounts[5];
+
+        const stakeBankInst = await StakeBank.deployed();
+
+        let paused = await stakeBankInst.paused();
+        assert.equal(paused, false,"wrong paused");
+
+        await stakeBankInst.pause({from: initialGov});
+        paused = await stakeBankInst.paused();
+        assert.equal(paused, true,"wrong paused");
+
+        try {
+            await stakeBankInst.stake("1000000000000000000", {from: player0, value: 102e16});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("Pausable: paused"));
+        }
+
+        try {
+            await stakeBankInst.unstake(web3.utils.toBN("999000000000000000"), {from: player0});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("Pausable: paused"));
+        }
+
+        await stakeBankInst.unpause({from: initialGov});
+        paused = await stakeBankInst.paused();
+        assert.equal(paused, false,"wrong paused");
+
+        const stakeTx0 = await stakeBankInst.stake("1000000000000000000", {from: player0, value: 102e16});
+        truffleAssert.eventEmitted(stakeTx0, "LogStake",(ev) => {
+            return ev.staker.toLowerCase() === player0.toLowerCase();
+        });
     });
 });
