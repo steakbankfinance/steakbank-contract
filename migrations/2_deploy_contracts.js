@@ -14,6 +14,7 @@ const Governor = artifacts.require("Governor");
 const Timelock = artifacts.require("Timelock");
 
 const MockPancakeRouter = artifacts.require("MockPancakeRouter");
+const BUSDToken = artifacts.require("BUSDToken");
 
 module.exports = function (deployer, network, accounts) {
   deployerAccount = accounts[0];
@@ -30,8 +31,9 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(SBF, initialGov);
 
     await deployer.deploy(MockPancakeRouter, LBNB.address, SBF.address);
+    await deployer.deploy(BUSDToken);
 
-    await deployer.deploy(CommunityTaxVault, initialGov, LBNB.address, SBF.address, MockPancakeRouter.address);
+    await deployer.deploy(CommunityTaxVault, initialGov, LBNB.address, SBF.address, BUSDToken.address, MockPancakeRouter.address);
     await deployer.deploy(StakingRewardVault, StakeBank.address);
     await deployer.deploy(UnstakeVault, StakeBank.address);
 

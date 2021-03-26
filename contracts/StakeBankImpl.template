@@ -280,11 +280,11 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256) {
         if (steps == 0) return 0;
         if (unstakeIndex<steps) return 0;
-        if ((unstakeIndex-steps)<headerIdx || unstakeIndex>=tailIdx) return 0;
+        if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return 0;
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
         uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
-        for (uint256 idx = unstakeIndex-1 ; idx >= unstakeIndex.sub(steps); idx--) {
+        for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
             sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
         }
@@ -299,7 +299,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
 
         uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
-        for (uint256 idx = unstakeIndex-1 ; idx >= unstakeIndex.sub(steps); idx--) {
+        for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
             unstakesMap[idx+1] = priorUnstake;
             sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
@@ -316,11 +316,11 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         }
 
         uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[msg.sender];
-        unstakesMap[unstakeIndex-steps] = unstake;
+        unstakesMap[unstakeIndex.sub(steps)] = unstake;
         bool found = false;
         for(uint256 idx=0; idx < unstakeSeqs.length; idx++) {
             if (unstakeSeqs[idx]==unstakeIndex) {
-                unstakeSeqs[idx] = unstakeIndex - steps;
+                unstakeSeqs[idx] = unstakeIndex.sub(steps);
                 found = true;
                 break;
             }

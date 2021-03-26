@@ -9,6 +9,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     address public governor;
     address public lbnbAddr;
     address public sbfAddr;
+    address public busdAddr;
     address public pancakeRouterAddr;
 
     event Deposit(address from, uint256 amount);
@@ -17,10 +18,11 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     event BurnSBFWithLBNB(uint256 burnedSBFAmount, uint256 costLBNBAmount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _pancakeRouterAddr) public {
+    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _busdAddr, address _pancakeRouterAddr) public {
         governor = _govAddr;
         lbnbAddr = _lbnbAddr;
         sbfAddr = _sbfAddr;
+        busdAddr = _busdAddr;
         pancakeRouterAddr = _pancakeRouterAddr;
     }
 
