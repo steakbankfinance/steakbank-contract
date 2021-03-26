@@ -76,8 +76,8 @@ contract FarmingCenter is Ownable {
     uint256 public lockRateMolecular;
     uint256 public lockRateDenominator;
 
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
+    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
     constructor() public {}
@@ -237,11 +237,13 @@ contract FarmingCenter is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
+        uint256 reward;
+        uint256 lockedReward;
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e18).sub(user.rewardDebt);
 
             if (pending > 0) {
-                rewardSBF(msg.sender, pending);
+                (reward, lockedReward) = rewardSBF(msg.sender, pending);
             }
         }
         if (_amount > 0) {
@@ -249,20 +251,22 @@ contract FarmingCenter is Ownable {
             user.amount = user.amount.add(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e18);
-        emit Deposit(msg.sender, _pid, _amount);
+        emit Deposit(msg.sender, _pid, _amount, reward, lockedReward);
     }
 
     // Withdraw LP tokens from FarmingCenter.
     function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
+        uint256 reward;
+        uint256 lockedReward;
         require(user.amount >= _amount, "withdraw: not good");
 
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e18).sub(user.rewardDebt);
 
         if (pending > 0) {
-            rewardSBF(msg.sender, pending);
+            (reward, lockedReward) = rewardSBF(msg.sender, pending);
         }
 
         if (_amount > 0) {
@@ -270,7 +274,7 @@ contract FarmingCenter is Ownable {
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(1e18);
-        emit Withdraw(msg.sender, _pid, _amount);
+        emit Withdraw(msg.sender, _pid, _amount, reward, lockedReward);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -283,16 +287,18 @@ contract FarmingCenter is Ownable {
         user.rewardDebt = 0;
     }
 
-    function rewardSBF(address _to, uint256 _amount) internal {
+    function rewardSBF(address _to, uint256 _amount) internal returns (uint256, uint256) {
         // before the startReleaseHeight, 70% SBF reward will be locked.
         uint256 farmingReward = _amount;
+        uint256 lockedAmount = 0;
         if (block.number < farmRewardLock.getLockEndHeight()) {
-            uint256 lockedAmount = farmingReward.mul(lockRateMolecular).div(lockRateDenominator);
+            lockedAmount = farmingReward.mul(lockRateMolecular).div(lockRateDenominator);
             farmingReward = farmingReward.sub(lockedAmount);
             sbf.mintTo(address(farmRewardLock), lockedAmount);
             farmRewardLock.notifyDeposit(_to, lockedAmount);
         }
         sbf.mintTo(_to, farmingReward);
+        return (farmingReward, lockedAmount);
     }
 
     function setRewardLockRate(uint256 molecular, uint256 denominator) public onlyOwner {
