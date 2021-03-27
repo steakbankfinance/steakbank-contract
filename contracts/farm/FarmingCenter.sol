@@ -46,10 +46,12 @@ contract FarmingCenter is Ownable {
 
     // Info of each pool.
     struct PoolInfo {
-        IBEP20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. SBFs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that SBFs distribution occurs.
-        uint256 accSBFPerShare; // Accumulated SBFs per share, times 1e18. See below.
+        IBEP20 lpToken;              // Address of LP token contract.
+        uint256 allocPoint;          // How many allocation points assigned to this pool. SBFs to distribute per block.
+        uint256 lastRewardBlock;     // Last block number that SBFs distribution occurs.
+        uint256 accSBFPerShare;      // Accumulated SBFs per share, times 1e18. See below.
+        uint256 molecularOfLockRate;   // Molecular of lock ratio
+        uint256 denominatorOfLockRate; // Denominator of lock ratio
     }
 
     bool public initialized;
@@ -74,9 +76,6 @@ contract FarmingCenter is Ownable {
     // The block number when SBF mining starts.
     uint256 public startBlock;
 
-    uint256 public lockRateMolecular;
-    uint256 public lockRateDenominator;
-
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -90,8 +89,8 @@ contract FarmingCenter is Ownable {
         IFarmRewardLock _farmRewardLock,
         uint256 _sbfPerBlock,
         uint256 _startBlock,
-        uint256 _lockRateMolecular,
-        uint256 _lockRateDenominator
+        uint256 _molecularOfLockRate,
+        uint256 _denominatorOfLockRate
     ) public
     {
         require(!initialized, "already initialized");
@@ -104,16 +103,16 @@ contract FarmingCenter is Ownable {
         sbfPerBlock = _sbfPerBlock;
         startBlock = _startBlock;
 
-        require(_lockRateDenominator>0&&_lockRateDenominator>=_lockRateMolecular, "invalid _lockRateDenominator or _lockRateMolecular");
-        lockRateMolecular = _lockRateMolecular;
-        lockRateDenominator = _lockRateDenominator;
+        require(_denominatorOfLockRate>0&&_denominatorOfLockRate>=_molecularOfLockRate, "invalid _denominatorOfLockRate or _molecularOfLockRate");
 
         // staking pool
         poolInfo.push(PoolInfo({
             lpToken: IBEP20(_lbnb),
             allocPoint: 1000,
             lastRewardBlock: startBlock,
-            accSBFPerShare: 0
+            accSBFPerShare: 0,
+            molecularOfLockRate: _molecularOfLockRate,
+            denominatorOfLockRate: _denominatorOfLockRate
             }));
 
         totalAllocPoint = 1000;
@@ -130,7 +129,7 @@ contract FarmingCenter is Ownable {
 
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-    function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate) public onlyOwner {
+    function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate, uint256 molecularOfLockRate, uint256 denominatorOfLockRate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -140,7 +139,9 @@ contract FarmingCenter is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accSBFPerShare: 0
+            accSBFPerShare: 0,
+            molecularOfLockRate: molecularOfLockRate,
+            denominatorOfLockRate: denominatorOfLockRate
             }));
         updateLBNBPool();
     }
@@ -244,7 +245,7 @@ contract FarmingCenter is Ownable {
             uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e18).sub(user.rewardDebt);
 
             if (pending > 0) {
-                (reward, lockedReward) = rewardSBF(msg.sender, pending);
+                (reward, lockedReward) = rewardSBF(msg.sender, pending, pool.molecularOfLockRate, pool.denominatorOfLockRate);
             }
         }
         if (_amount > 0) {
@@ -267,7 +268,7 @@ contract FarmingCenter is Ownable {
         uint256 pending = user.amount.mul(pool.accSBFPerShare).div(1e18).sub(user.rewardDebt);
 
         if (pending > 0) {
-            (reward, lockedReward) = rewardSBF(msg.sender, pending);
+            (reward, lockedReward) = rewardSBF(msg.sender, pending, pool.molecularOfLockRate, pool.denominatorOfLockRate);
         }
 
         if (_amount > 0) {
@@ -288,12 +289,12 @@ contract FarmingCenter is Ownable {
         user.rewardDebt = 0;
     }
 
-    function rewardSBF(address _to, uint256 _amount) internal returns (uint256, uint256) {
+    function rewardSBF(address _to, uint256 _amount, uint256 molecularOfLockRate, uint256 denominatorOfLockRate) internal returns (uint256, uint256) {
         // before the startReleaseHeight, 70% SBF reward will be locked.
         uint256 farmingReward = _amount;
         uint256 lockedAmount = 0;
         if (block.number < farmRewardLock.getLockEndHeight()) {
-            lockedAmount = farmingReward.mul(lockRateMolecular).div(lockRateDenominator);
+            lockedAmount = farmingReward.mul(molecularOfLockRate).div(denominatorOfLockRate);
             farmingReward = farmingReward.sub(lockedAmount);
             sbf.mintTo(address(farmRewardLock), lockedAmount);
             farmRewardLock.notifyDeposit(_to, lockedAmount);
@@ -302,9 +303,10 @@ contract FarmingCenter is Ownable {
         return (farmingReward, lockedAmount);
     }
 
-    function setRewardLockRate(uint256 molecular, uint256 denominator) public onlyOwner {
+    function setPoolRewardLockRate(uint256 _pid, uint256 molecular, uint256 denominator) public onlyOwner {
         require(denominator>0&&denominator>=molecular, "invalid molecular or denominator");
-        lockRateMolecular = molecular;
-        lockRateDenominator = denominator;
+        PoolInfo storage pool = poolInfo[_pid];
+        pool.molecularOfLockRate = molecular;
+        pool.denominatorOfLockRate = denominator;
     }
 }
