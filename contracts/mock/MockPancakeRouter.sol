@@ -12,20 +12,22 @@ contract MockPancakeRouter is IPancakeRouter {
         sbfAddr = _sbfAddr;
     }
 
-    function swapTokensForExactTokens(
-        uint amountOut,
-        uint amountInMax,
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
         address[] calldata path,
         address to,
-        uint deadline) override external returns (uint[] memory amounts) {
+        uint deadline
+    ) external override returns (uint[] memory amounts) {
         return new uint[](0);
     }
 
-    function swapETHForExactTokens(
-        uint amountOut,
+    function swapExactETHForTokens(
+        uint amountOutMin,
         address[] calldata path,
         address to,
-        uint deadline) override external payable returns (uint[] memory amounts) {
+        uint deadline
+    ) external override payable returns (uint[] memory amounts){
         return new uint[](0);
     }
 }
