@@ -5,10 +5,9 @@ import "./interface/IPancakeRouter.sol";
 import "./interface/IMintBurnToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 
-contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
+contract CommunityTaxVault is IVault, ReentrancyGuard {
     using SafeMath for uint256;
 
     address public governor;
@@ -23,14 +22,14 @@ contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
     event BuyAndBurnSBF(uint256 burnedSBFAmount, uint256 costBNBAmount, uint256 costLBNBAmount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    function initialize(
+    constructor(
         address _govAddr,
         address _lbnbAddr,
         address _sbfAddr,
         address _wethAddr,
         address _busdAddr,
         address _pancakeRouterAddr
-    ) external initializer {
+    ) public {
         governor = _govAddr;
         lbnbAddr = _lbnbAddr;
         sbfAddr = _sbfAddr;
@@ -97,9 +96,7 @@ contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
         uint256 costLBNBAmount = lbnbBalance.sub(IBEP20(lbnbAddr).balanceOf(address(this)));
 
         uint256 sbfBalance = IBEP20(sbfAddr).balanceOf(address(this));
-        if (sbfBalance>0) {
-            IMintBurnToken(sbfAddr).burn(sbfBalance);
-        }
+        IMintBurnToken(sbfAddr).burn(sbfBalance);
         emit BuyAndBurnSBF(sbfBalance, costBNBAmount, costLBNBAmount);
         return true;
     }
