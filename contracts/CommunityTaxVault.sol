@@ -1,27 +1,40 @@
 pragma solidity 0.6.12;
 
 import "./interface/IVault.sol";
+import "./interface/IPancakeRouter.sol";
+import "./interface/IMintBurnToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
+import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 
-contract CommunityTaxVault is IVault, ReentrancyGuard {
+contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
+    using SafeMath for uint256;
 
     address public governor;
     address public lbnbAddr;
     address public sbfAddr;
+    address public wethAddr;
     address public busdAddr;
     address public pancakeRouterAddr;
 
     event Deposit(address from, uint256 amount);
     event Withdraw(address recipient, uint256 amount);
-    event BurnSBFWithBNB(uint256 burnedSBFAmount, uint256 costBNBAmount);
-    event BurnSBFWithLBNB(uint256 burnedSBFAmount, uint256 costLBNBAmount);
+    event BuyAndBurnSBF(uint256 burnedSBFAmount, uint256 costBNBAmount, uint256 costLBNBAmount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _busdAddr, address _pancakeRouterAddr) public {
+    function initialize(
+        address _govAddr,
+        address _lbnbAddr,
+        address _sbfAddr,
+        address _wethAddr,
+        address _busdAddr,
+        address _pancakeRouterAddr
+    ) external initializer {
         governor = _govAddr;
         lbnbAddr = _lbnbAddr;
         sbfAddr = _sbfAddr;
+        wethAddr = _wethAddr;
         busdAddr = _busdAddr;
         pancakeRouterAddr = _pancakeRouterAddr;
     }
@@ -35,8 +48,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         _;
     }
 
-    function transferGovernorship(address newGovernor) external {
-        require(msg.sender == governor, "only governor is allowed");
+    function transferGovernorship(address newGovernor) onlyGov external {
         require(newGovernor != address(0), "new governor is zero address");
         governor = newGovernor;
         emit GovernorshipTransferred(governor, newGovernor);
@@ -51,17 +63,44 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         return amount;
     }
 
+    function setLBNBAddr(address newLBNBAddr) onlyGov external {
+        lbnbAddr = newLBNBAddr;
+    }
+    function setSBFAddr(address newSBFAddr) onlyGov external {
+        sbfAddr = newSBFAddr;
+    }
     function setPancakeRouterAddr(address newPancakeRouterAddr) onlyGov external {
         pancakeRouterAddr = newPancakeRouterAddr;
     }
 
-    function buyAndBurnSBFWithBNB() nonReentrant onlyGov external returns(bool) {
-        // TODO call pancake swap to buy SBF with BNB, then burn SBF
-        return true;
-    }
+    function buyAndBurnSBF() nonReentrant onlyGov external returns(bool) {
+        address[] memory path = new address[](3);
+        path[1]=busdAddr;
+        path[2]=sbfAddr;
 
-    function buyAndBurnSBFWithLBNB() nonReentrant onlyGov external returns(bool) {
-        // TODO call pancake swap to buy SBF with LBNB, then burn SBF
+        uint256 bnbBalance = address(this).balance;
+        if (bnbBalance > 0) {
+            path[0]=wethAddr;
+            IPancakeRouter(pancakeRouterAddr).swapExactETHForTokens{value: bnbBalance}(0, path, address(this), block.timestamp+1);
+        }
+        uint256 costBNBAmount = bnbBalance.sub(address(this).balance);
+
+        uint256 lbnbBalance = IBEP20(lbnbAddr).balanceOf(address(this));
+        if (lbnbBalance > 0) {
+            path[0]=lbnbAddr;
+            uint256 allowance = IBEP20(lbnbAddr).allowance(address(this), pancakeRouterAddr);
+            if (allowance < lbnbBalance) {
+                IBEP20(lbnbAddr).approve(pancakeRouterAddr, lbnbBalance);
+            }
+            IPancakeRouter(pancakeRouterAddr).swapExactTokensForTokens(lbnbBalance, 0, path, address(this), block.timestamp+1);
+        }
+        uint256 costLBNBAmount = lbnbBalance.sub(IBEP20(lbnbAddr).balanceOf(address(this)));
+
+        uint256 sbfBalance = IBEP20(sbfAddr).balanceOf(address(this));
+        if (sbfBalance>0) {
+            IMintBurnToken(sbfAddr).burn(sbfBalance);
+        }
+        emit BuyAndBurnSBF(sbfBalance, costBNBAmount, costLBNBAmount);
         return true;
     }
 }
