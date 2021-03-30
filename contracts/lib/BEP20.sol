@@ -35,7 +35,6 @@ contract BEP20 is Context, Ownable, IBEP20 {
         _name = name;
         _symbol = symbol;
         _decimals = decimals;
-        _totalSupply = initialSupply;
         _mint(ownerAddr, initialSupply);
     }
 

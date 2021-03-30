@@ -29,7 +29,7 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(LBNB, StakeBank.address);
     await deployer.deploy(SBF, initialGov);
 
-    await deployer.deploy(MockPancakeRouter, SBF.address);
+    await deployer.deploy(MockPancakeRouter, LBNB.address, SBF.address);
 
     const MockBUSDAddr = "0x0000000000000000000000000000000000000000";
     const MockWBNBAddr = "0x0000000000000000000000000000000000000000";
@@ -46,6 +46,6 @@ module.exports = function (deployer, network, accounts) {
 
     await stakeBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, rewardMaintainer, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
     await farmRewardLockInst.initialize(SBF.address, "1000", "100", initialGov, FarmingCenter.address,  {from: deployerAccount});
-    await farmingCenterInst.initialize(initialGov, LBNB.address, SBF.address, FarmRewardLock.address, "10000000000000000000", "500", "7", "10", {from: deployerAccount});
+    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, "10000000000000000000", "500", "7", "10", {from: deployerAccount});
   });
 };
