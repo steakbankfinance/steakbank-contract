@@ -5,10 +5,10 @@ import "./interface/IPancakeRouter.sol";
 import "./interface/IMintBurnToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-
+import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 
-contract CommunityTaxVault is IVault, ReentrancyGuard {
+contract CommunityTaxVault is IVault, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
 
     address public governor;
@@ -23,7 +23,14 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     event BuyAndBurnSBF(uint256 burnedSBFAmount, uint256 costBNBAmount, uint256 costLBNBAmount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
-    constructor(address payable _govAddr, address _lbnbAddr, address _sbfAddr, address _wethAddr, address _busdAddr, address _pancakeRouterAddr) public {
+    function initialize(
+        address _govAddr,
+        address _lbnbAddr,
+        address _sbfAddr,
+        address _wethAddr,
+        address _busdAddr,
+        address _pancakeRouterAddr
+    ) external initializer {
         governor = _govAddr;
         lbnbAddr = _lbnbAddr;
         sbfAddr = _sbfAddr;
@@ -41,8 +48,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         _;
     }
 
-    function transferGovernorship(address newGovernor) external {
-        require(msg.sender == governor, "only governor is allowed");
+    function transferGovernorship(address newGovernor) onlyGov external {
         require(newGovernor != address(0), "new governor is zero address");
         governor = newGovernor;
         emit GovernorshipTransferred(governor, newGovernor);
@@ -57,6 +63,12 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
         return amount;
     }
 
+    function setLBNBAddr(address newLBNBAddr) onlyGov external {
+        lbnbAddr = newLBNBAddr;
+    }
+    function setSBFAddr(address newSBFAddr) onlyGov external {
+        sbfAddr = newSBFAddr;
+    }
     function setPancakeRouterAddr(address newPancakeRouterAddr) onlyGov external {
         pancakeRouterAddr = newPancakeRouterAddr;
     }
