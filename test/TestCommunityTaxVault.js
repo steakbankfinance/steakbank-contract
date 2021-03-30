@@ -111,11 +111,14 @@ contract('CommunityTaxVault Contract', (accounts) => {
 
         const communityTaxInst = await CommunityTaxVault.deployed();
 
+        const stakeBankInst = await StakeBank.deployed();
+        const lbnbInst = await LBNB.deployed();
+        await stakeBankInst.stake("1000000000000000000", {from: player0, value: 102e16});
+        await lbnbInst.approve(StakeBank.address, web3.utils.toBN("999000000000000000"), {from: player0})
+        await stakeBankInst.unstake(web3.utils.toBN("999000000000000000"), {from: player0});
+
         const sbfInst = await SBF.deployed();
         await sbfInst.transfer(MockPancakeRouter.address, web3.utils.toBN(1e18), {from: initialGov});
-
-        await web3.eth.sendTransaction({ from: initialGov, to: CommunityTaxVault.address, value: web3.utils.toBN(1e18), chainId: 666})
-
         try {
             await communityTaxInst.buyAndBurnSBF({from: player0});
             assert.fail();
@@ -125,7 +128,7 @@ contract('CommunityTaxVault Contract', (accounts) => {
 
         let buyAndBurnSBFTx = await communityTaxInst.buyAndBurnSBF({from: initialGov, chainId: 666});
         truffleAssert.eventEmitted(buyAndBurnSBFTx, "BuyAndBurnSBF",(ev) => {
-            return ev.burnedSBFAmount.toString() === "500000000000000000" && ev.costBNBAmount.toString() === "1000000000000000000" && ev.costLBNBAmount.toString() === "0";
+            return ev.burnedSBFAmount.toString() === "750000000000000000" && ev.costBNBAmount.toString() === "1000000000000000" && ev.costLBNBAmount.toString() === "999000000000000";
         });
     });
     it('Test change LBNBAddr, SBFAddr and PancakeRouterAddr', async () => {

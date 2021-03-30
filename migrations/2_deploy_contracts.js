@@ -29,7 +29,7 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(LBNB, StakeBank.address);
     await deployer.deploy(SBF, initialGov);
 
-    await deployer.deploy(MockPancakeRouter, SBF.address);
+    await deployer.deploy(MockPancakeRouter, LBNB.address, SBF.address);
 
     const MockBUSDAddr = "0x0000000000000000000000000000000000000000";
     const MockWBNBAddr = "0x0000000000000000000000000000000000000000";

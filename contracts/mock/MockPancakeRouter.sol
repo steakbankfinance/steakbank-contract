@@ -7,9 +7,11 @@ contract MockPancakeRouter is IPancakeRouter {
 
     using SafeERC20 for IERC20;
 
+    address public lbnbAddr;
     address public sbfAddr;
 
-    constructor(address _sbfAddr) public {
+    constructor(address _lbnbAddr, address _sbfAddr) public {
+        lbnbAddr = _lbnbAddr;
         sbfAddr = _sbfAddr;
     }
 
@@ -20,6 +22,7 @@ contract MockPancakeRouter is IPancakeRouter {
         address to,
         uint deadline
     ) external override returns (uint[] memory amounts) {
+        IERC20(lbnbAddr).safeTransferFrom(msg.sender, address(this), amountIn);
         uint256 sbfAmount = IERC20(sbfAddr).balanceOf(address(this));
         IERC20(sbfAddr).safeTransfer(to, sbfAmount/2);
         return new uint[](0);
