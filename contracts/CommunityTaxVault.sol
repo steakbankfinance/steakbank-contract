@@ -49,8 +49,8 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
 
     function transferGovernorship(address newGovernor) onlyGov external {
         require(newGovernor != address(0), "new governor is zero address");
-        governor = newGovernor;
         emit GovernorshipTransferred(governor, newGovernor);
+        governor = newGovernor;
     }
 
     function claimBNB(uint256 amount, address payable recipient) nonReentrant onlyGov override external returns(uint256) {
