@@ -43,6 +43,7 @@
     "eslint-plugin-mocha-no-only": "^1.1.0",
     "eslint-plugin-node": "^10.0.0",
     "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1"
+    "eslint-plugin-standard": "^4.0.1",
+    "y18n": ">=3.2.2"
   }
 }

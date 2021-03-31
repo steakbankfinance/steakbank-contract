@@ -392,7 +392,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
     }
 
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), 'BEP20: mint to the zero address');
+        require(account != address(0), "BEP20: mint to the zero address");
 
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
