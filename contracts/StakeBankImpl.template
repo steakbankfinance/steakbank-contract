@@ -14,14 +14,14 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public constant ZERO_ADDR = 0x0000000000000000000000000000000000000000;
-    address public constant TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
+    address constant public ZERO_ADDR = 0x0000000000000000000000000000000000000000;
+    address constant public TOKENHUB_ADDR = 0x0000000000000000000000000000000000001004;
 
-    uint8 constant public  BreathePeriod = 0;
-    uint8 constant public  NormalPeriod = 1;
+    uint8 constant public BREATHE_PERIOD = 0;
+    uint8 constant public NORMAL_PERIOD = 1;
 
-    uint256 public constant minimumStake = 1 * 1e18; // 1:BNB
-    uint256 public constant exchangeRatePrecision = 1e9;
+    uint256 constant public MINIMUM_STAKE_AMOUNT = 1 * 1e18; // 1:BNB
+    uint256 constant public EXCHANGE_RATE_PRECISION = 1e9;
 
     address public LBNB;
     address public SBF;
@@ -115,9 +115,9 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     function getMode() public view returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
         if (UTCTime<=600 || UTCTime>85200) {
-            return BreathePeriod;
+            return BREATHE_PERIOD;
         } else {
-            return NormalPeriod;
+            return NORMAL_PERIOD;
         }
     }
 
@@ -134,7 +134,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     ) external initializer{
         admin = _admin;
 
-        lbnbToBNBExchangeRate = exchangeRatePrecision;
+        lbnbToBNBExchangeRate = EXCHANGE_RATE_PRECISION;
         LBNB = _LBNB;
         SBF = _SBF;
 
@@ -221,20 +221,20 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         unstakeFeeDenominator = newUnstakeFeeDenominator;
     }
 
-    function stake(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
+    function stake(uint256 amount) notContract nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
 {% if mock %}
         uint256 miniRelayFee = 2e16;
 {% else %}
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 {% endif %}
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
-        require(amount%1e10==0 && amount>=minimumStake, "stake amount must be N * 1e10 and be greater than minimumStake");
+        require(amount%1e10==0 && amount>=MINIMUM_STAKE_AMOUNT, "stake amount must be N * 1e10 and greater than MINIMUM_STAKE_AMOUNT");
 
         uint256 stakeFee = amount.mul(stakeFeeMolecular).div(stakeFeeDenominator);
         communityTaxVault.transfer(stakeFee);
         uint256 stakeAmount = amount.sub(stakeFee);
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(stakeAmount);
-        uint256 lbnbAmount = stakeAmount.mul(exchangeRatePrecision).div(lbnbToBNBExchangeRate);
+        uint256 lbnbAmount = stakeAmount.mul(EXCHANGE_RATE_PRECISION).div(lbnbToBNBExchangeRate);
 
         uint256 stakeAmountDust = stakeAmount.mod(1e10);
         if (stakeAmountDust != 0) {
@@ -252,7 +252,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function unstake(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external returns (bool) {
+    function unstake(uint256 amount) notContract nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external returns (bool) {
         uint256 unstakeFee = amount.mul(unstakeFeeMolecular).div(unstakeFeeDenominator);
         IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, unstakeFee);
 
@@ -260,7 +260,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         IERC20(LBNB).safeTransferFrom(msg.sender, address(this), unstakeAmount);
         IMintBurnToken(LBNB).burn(unstakeAmount);
 
-        uint256 bnbAmount = unstakeAmount.mul(lbnbToBNBExchangeRate).div(exchangeRatePrecision);
+        uint256 bnbAmount = unstakeAmount.mul(lbnbToBNBExchangeRate).div(EXCHANGE_RATE_PRECISION);
         bnbAmount = bnbAmount.sub(bnbAmount.mod(1e10));
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.sub(bnbAmount);
         unstakesMap[tailIdx] = Unstake({
@@ -395,9 +395,9 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 lbnbTotalSupply = IERC20(LBNB).totalSupply();
         lbnbMarketCapacityCountByBNB = lbnbMarketCapacityCountByBNB.add(rewardVaultBalance);
         if (lbnbTotalSupply == 0) {
-            lbnbToBNBExchangeRate = exchangeRatePrecision;
+            lbnbToBNBExchangeRate = EXCHANGE_RATE_PRECISION;
         } else {
-            lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.mul(exchangeRatePrecision).div(lbnbTotalSupply);
+            lbnbToBNBExchangeRate = lbnbMarketCapacityCountByBNB.mul(EXCHANGE_RATE_PRECISION).div(lbnbTotalSupply);
         }
         emit LogUpdateLBNBToBNBExchangeRate(lbnbTotalSupply, lbnbMarketCapacityCountByBNB, lbnbToBNBExchangeRate);
         return true;
