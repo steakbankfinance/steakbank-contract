@@ -5,7 +5,7 @@ const UnstakeVault = artifacts.require("UnstakeVault");
 const StakingRewardVault = artifacts.require("StakingRewardVault");
 const CommunityTaxVault = artifacts.require("CommunityTaxVault");
 
-const StakeBank = artifacts.require("StakeBankImpl");
+const SteakBank = artifacts.require("SteakBankImpl");
 
 const FarmRewardLock = artifacts.require("FarmRewardLock");
 const FarmingCenter = artifacts.require("FarmingCenter");
@@ -111,11 +111,11 @@ contract('CommunityTaxVault Contract', (accounts) => {
 
         const communityTaxInst = await CommunityTaxVault.deployed();
 
-        const stakeBankInst = await StakeBank.deployed();
+        const steakBankInst = await SteakBank.deployed();
         const lbnbInst = await LBNB.deployed();
-        await stakeBankInst.stake("1000000000000000000", {from: player0, value: 102e16});
-        await lbnbInst.approve(StakeBank.address, web3.utils.toBN("999000000000000000"), {from: player0})
-        await stakeBankInst.unstake(web3.utils.toBN("999000000000000000"), {from: player0});
+        await steakBankInst.stake("1000000000000000000", {from: player0, value: 102e16});
+        await lbnbInst.approve(SteakBank.address, web3.utils.toBN("999000000000000000"), {from: player0})
+        await steakBankInst.unstake(web3.utils.toBN("999000000000000000"), {from: player0});
 
         const sbfInst = await SBF.deployed();
         await sbfInst.transfer(MockPancakeRouter.address, web3.utils.toBN(1e18), {from: initialGov});

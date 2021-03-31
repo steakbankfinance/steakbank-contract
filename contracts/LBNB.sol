@@ -9,7 +9,7 @@ contract LBNB is BEP20, IMintBurnToken {
         super.initializeBEP20("Liquidity Staked BNB", "LBNB", 18, 0, ownerAddr);
     }
 
-    /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (StakeBank).
+    /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (SteakBank).
     function mintTo(address _to, uint256 _amount) override external onlyOwner returns (bool) {
         _mint(_to, _amount);
         return true;

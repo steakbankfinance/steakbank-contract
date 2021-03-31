@@ -1,4 +1,4 @@
-# StakeBank
+# SteakBank
 
 ## Install dependency
 

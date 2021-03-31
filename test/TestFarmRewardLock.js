@@ -5,7 +5,7 @@ const UnstakeVault = artifacts.require("UnstakeVault");
 const StakingRewardVault = artifacts.require("StakingRewardVault");
 const CommunityTaxVault = artifacts.require("CommunityTaxVault");
 
-const StakeBank = artifacts.require("StakeBankImpl");
+const SteakBank = artifacts.require("SteakBankImpl");
 
 const FarmRewardLock = artifacts.require("FarmRewardLock");
 const FarmingCenter = artifacts.require("FarmingCenter");

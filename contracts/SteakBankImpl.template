@@ -10,7 +10,7 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 
-contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
+contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -167,7 +167,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function acceptAdmin() external {
-        require(msg.sender == pendingAdmin, "StakeBank::acceptAdmin: Call must come from pendingAdmin.");
+        require(msg.sender == pendingAdmin, "acceptAdmin: Call must come from pendingAdmin.");
         admin = msg.sender;
         pendingAdmin = address(0);
 
@@ -175,7 +175,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function setPendingAdmin(address pendingAdmin_) external {
-        require(msg.sender == admin, "StakeBank::setPendingAdmin: Call must come from admin.");
+        require(msg.sender == admin, "setPendingAdmin: Call must come from admin.");
         pendingAdmin = pendingAdmin_;
 
         emit NewPendingAdmin(pendingAdmin);
@@ -222,9 +222,11 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function stake(uint256 amount) notContract nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
-
+{% if mock %}
+        uint256 miniRelayFee = 2e16;
+{% else %}
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-
+{% endif %}
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=MINIMUM_STAKE_AMOUNT, "stake amount must be N * 1e10 and greater than MINIMUM_STAKE_AMOUNT");
 
@@ -239,9 +241,11 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
             unstakeVault.transfer(stakeAmountDust);
             stakeAmount = stakeAmount.sub(stakeAmountDust);
         }
-
+{% if mock %}
+        address(uint160(bcStakingTSS)).transfer(miniRelayFee.add(stakeAmount));
+{% else %}
         ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(stakeAmount)}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
-
+{% endif %}
         IMintBurnToken(LBNB).mintTo(msg.sender, lbnbAmount);
         emit LogStake(msg.sender, lbnbAmount, stakeAmount);
 
@@ -400,15 +404,19 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function resendBNBToBCStakingTSS(uint256 amount) onlyRewardMaintainer whenNotPaused external payable returns(bool) {
-
+{% if mock %}
+        uint256 miniRelayFee = 2e16;
+{% else %}
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
-
+{% endif %}
         require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
-        require(address(this).balance >= amount, "stakeBank BNB balance is not enough");
+        require(address(this).balance >= amount, "BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
-
+{% if mock %}
+        address(uint160(bcStakingTSS)).transfer(miniRelayFee.add(amount));
+{% else %}
         ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
-
+{% endif %}
         return true;
     }
 }
