@@ -44,12 +44,11 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
     uint256 public lbnbMarketCapacityCountByBNB;
     uint256 public lbnbToBNBExchangeRate;
+
     mapping(uint256 => Unstake) public unstakesMap;
     mapping(address => uint256[]) public accountUnstakeSeqsMap;
     uint256 public headerIdx;
     uint256 public tailIdx;
-
-    mapping(address => uint256) public stakingReward;
 
     uint256 public priceToAccelerateUnstake;
     uint256 public stakeFeeMolecular;
@@ -168,7 +167,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function acceptAdmin() external {
-        require(msg.sender == pendingAdmin, "StakingBank::acceptAdmin: Call must come from pendingAdmin.");
+        require(msg.sender == pendingAdmin, "StakeBank::acceptAdmin: Call must come from pendingAdmin.");
         admin = msg.sender;
         pendingAdmin = address(0);
 
@@ -176,7 +175,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function setPendingAdmin(address pendingAdmin_) external {
-        require(msg.sender == admin, "StakingBank::setPendingAdmin: Call must come from admin.");
+        require(msg.sender == admin, "StakeBank::setPendingAdmin: Call must come from admin.");
         pendingAdmin = pendingAdmin_;
 
         emit NewPendingAdmin(pendingAdmin);
@@ -224,7 +223,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
     function stake(uint256 amount) notContract nonReentrant mustInMode(NormalPeriod) whenNotPaused external payable returns (bool) {
 
-        uint256 miniRelayFee = 2e16;
+        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
         require(amount%1e10==0 && amount>=minimumStake, "stake amount must be N * 1e10 and be greater than minimumStake");
@@ -241,7 +240,7 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
             stakeAmount = stakeAmount.sub(stakeAmountDust);
         }
 
-        address(uint160(bcStakingTSS)).transfer(miniRelayFee.add(stakeAmount));
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(stakeAmount)}(ZERO_ADDR, bcStakingTSS, stakeAmount, uint64(block.timestamp + 3600));
 
         IMintBurnToken(LBNB).mintTo(msg.sender, lbnbAmount);
         emit LogStake(msg.sender, lbnbAmount, stakeAmount);
@@ -402,13 +401,13 @@ contract StakeBankImpl is Context, Initializable, ReentrancyGuard {
 
     function resendBNBToBCStakingTSS(uint256 amount) onlyRewardMaintainer whenNotPaused external payable returns(bool) {
 
-        uint256 miniRelayFee = 2e16;
+        uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
         require(msg.value == miniRelayFee, "msg.value must equal to miniRelayFee");
         require(address(this).balance >= amount, "stakeBank BNB balance is not enough");
         require(amount%1e10==0, "amount must be N * 1e10");
 
-        address(uint160(bcStakingTSS)).transfer(miniRelayFee.add(amount));
+        ITokenHub(TOKENHUB_ADDR).transferOut{value:miniRelayFee.add(amount)}(ZERO_ADDR, bcStakingTSS, amount, uint64(block.timestamp + 3600));
 
         return true;
     }
