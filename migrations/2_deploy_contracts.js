@@ -18,7 +18,6 @@ const MockPancakeRouter = artifacts.require("MockPancakeRouter");
 module.exports = function (deployer, network, accounts) {
   deployerAccount = accounts[0];
   initialGov = accounts[1];
-  rewardMaintainer = accounts[2];
   govGuardian = accounts[3];
   bcStakingTSS = accounts[4];
 
@@ -44,7 +43,7 @@ module.exports = function (deployer, network, accounts) {
     const farmRewardLockInst = await FarmRewardLock.deployed();
     const farmingCenterInst = await FarmingCenter.deployed();
 
-    await steakBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, rewardMaintainer, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
+    await steakBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
     await farmRewardLockInst.initialize(SBF.address, "1000", "100", initialGov, FarmingCenter.address,  {from: deployerAccount});
     await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, "10000000000000000000", "500", "7", "10000000000", {from: deployerAccount});
   });

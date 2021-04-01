@@ -27,7 +27,6 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
     address public LBNB;
     address public SBF;
     address public bcStakingTSS;
-    address public stakingRewardMaintainer;
     address payable public communityTaxVault;
     address payable public stakingRewardVault;
     address payable public unstakeVault;
@@ -81,11 +80,6 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         _;
     }
 
-    modifier onlyRewardMaintainer() {
-        require(msg.sender == stakingRewardMaintainer, "only admin is allowed");
-        _;
-    }
-
     modifier whenNotPaused() {
         require(!paused(), "Pausable: paused");
         _;
@@ -96,12 +90,12 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         _;
     }
 
-    modifier mustInMode(uint8 expectedMode) {
-        require(getMode() == expectedMode, "Wrong mode");
+    modifier mustInPeriod(uint8 expectedPeriod) {
+        require(getPeriod() == expectedPeriod, "Wrong period");
         _;
     }
 
-    function getMode() public view returns (uint8) {
+    function getPeriod() public view returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
         if (UTCTime<=600 || UTCTime>85200) {
             return BREATHE_PERIOD;
@@ -115,7 +109,6 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         address _LBNB,
         address _SBF,
         address _bcStakingTSS,
-        address _stakingRewardMaintainer,
         address payable _communityTaxVault,
         address payable _stakingRewardVault,
         address payable _unstakeVault,
@@ -128,7 +121,6 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         SBF = _SBF;
 
         bcStakingTSS = _bcStakingTSS;
-        stakingRewardMaintainer = _stakingRewardMaintainer;
 
         communityTaxVault = _communityTaxVault;
         stakingRewardVault = _stakingRewardVault;
@@ -210,7 +202,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         unstakeFeeDenominator = newUnstakeFeeDenominator;
     }
 
-    function stake(uint256 amount) nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
+    function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
 {% if mock %}
         uint256 miniRelayFee = 2e16;
 {% else %}
@@ -241,7 +233,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function unstake(uint256 amount) nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external returns (bool) {
+    function unstake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) whenNotPaused external returns (bool) {
         uint256 unstakeFee = amount.mul(unstakeFeeMolecular).div(unstakeFeeDenominator);
         IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, unstakeFee);
 
@@ -392,7 +384,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function resendBNBToBCStakingTSS(uint256 amount) onlyRewardMaintainer whenNotPaused external payable returns(bool) {
+    function resendBNBToBCStakingTSS(uint256 amount) mustInPeriod(NORMAL_PERIOD) whenNotPaused external payable returns(bool) {
 {% if mock %}
         uint256 miniRelayFee = 2e16;
 {% else %}

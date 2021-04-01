@@ -156,7 +156,6 @@ contract('SteakBank Contract', (accounts) => {
     });
     it('Test rebaseLBNBToBNB', async () => {
         initialGov = accounts[1];
-        rewardMaintainer = accounts[2];
         govGuardian = accounts[3];
         bcStakingTSS = accounts[4];
         player0 = accounts[5];
@@ -290,15 +289,15 @@ contract('SteakBank Contract', (accounts) => {
     });
     it('Test resendBNBToBCStakingTSS', async () => {
         deployerAccount = accounts[0];
-        rewardMaintainer = accounts[2];
         bcStakingTSS = accounts[4];
+        player0 = accounts[5];
 
         const steakBankInst = await SteakBank.deployed();
 
         await web3.eth.sendTransaction({ from: deployerAccount, to: SteakBank.address, value: web3.utils.toBN(1e18), chainId: 666})
 
         const beforeResendBCStakingTSS = await web3.eth.getBalance(bcStakingTSS);
-        await steakBankInst.resendBNBToBCStakingTSS(web3.utils.toBN(1e18), {value:2e16, from: rewardMaintainer});
+        await steakBankInst.resendBNBToBCStakingTSS(web3.utils.toBN(1e18), {value:2e16, from: player0});
         const afterResendBCStakingTSS = await web3.eth.getBalance(bcStakingTSS);
         assert.equal(web3.utils.toBN(afterResendBCStakingTSS).sub(web3.utils.toBN(beforeResendBCStakingTSS)), "1020000000000000000", "wrong resend result");
     });
@@ -352,12 +351,12 @@ contract('SteakBank Contract', (accounts) => {
     it('Test transfer admin', async () => {
         deployerAccount = accounts[0];
         initialGov = accounts[1];
-        rewardMaintainer = accounts[2];
+        wrongAdmin = accounts[2];
 
         const steakBankInst = await SteakBank.deployed();
 
         try {
-            await steakBankInst.setPendingAdmin(deployerAccount, {from: rewardMaintainer});
+            await steakBankInst.setPendingAdmin(deployerAccount, {from: wrongAdmin});
             assert.fail();
         } catch (error) {
             assert.ok(error.toString().includes("Call must come from admin"));
@@ -375,7 +374,7 @@ contract('SteakBank Contract', (accounts) => {
         assert.equal(pendingAdmin, deployerAccount,"wrong pendingAdmin");
 
         try {
-            await steakBankInst.acceptAdmin({from: rewardMaintainer});
+            await steakBankInst.acceptAdmin({from: wrongAdmin});
             assert.fail();
         } catch (error) {
             assert.ok(error.toString().includes("Call must come from pendingAdmin"));
