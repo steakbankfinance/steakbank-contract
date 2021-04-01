@@ -46,19 +46,50 @@ contract('FarmingCenter Contract', (accounts) => {
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("40000").mul(web3.utils.toBN(1e18)), {from: player3});
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("50000").mul(web3.utils.toBN(1e18)), {from: player4});
 
-        await farmingCenterInst.deposit(0, web3.utils.toBN("10000").mul(web3.utils.toBN(1e18)), {from: player0});
+        await farmingCenterInst.deposit(0, web3.utils.toBN("10").mul(web3.utils.toBN(1e18)), {from: player0});
 
-        await time.advanceBlock();
-        await time.advanceBlock();
         await time.advanceBlock();
 
         let pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
         assert(pendingSBFPlayer0, "0", "wrong pending SBF");
 
         await time.advanceBlock();
-
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
-        assert(web3.utils.toBN(pendingSBFPlayer0), web3.utils.toBN("1").mul(web3.utils.toBN(1e18)), "wrong pending SBF");
+        assert.equal(web3.utils.toBN(pendingSBFPlayer0).eq(web3.utils.toBN("10").mul(web3.utils.toBN(1e18))), true, "wrong pending SBF");
+
+        await time.advanceBlock();
+        pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
+        assert.equal(web3.utils.toBN(pendingSBFPlayer0).eq(web3.utils.toBN("20").mul(web3.utils.toBN(1e18))), true, "wrong pending SBF");
+
+        await farmingCenterInst.deposit(0, web3.utils.toBN("20").mul(web3.utils.toBN(1e18)), {from: player1});
+        pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
+        assert.equal(web3.utils.toBN(pendingSBFPlayer0).eq(web3.utils.toBN("30").mul(web3.utils.toBN(1e18))), true, "wrong pending SBF");
+        let pendingSBFPlayer1 = await farmingCenterInst.pendingSBF(0, player1);
+        assert.equal(web3.utils.toBN(pendingSBFPlayer1).eq(web3.utils.toBN("0").mul(web3.utils.toBN(1e18))), true, "wrong pending SBF");
+
+        await farmingCenterInst.deposit(0, web3.utils.toBN("30").mul(web3.utils.toBN(1e18)), {from: player2});
+        pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
+        assert.equal(web3.utils.toBN(pendingSBFPlayer0).eq(web3.utils.toBN("3333333333333").mul(web3.utils.toBN(1e7))), true, "wrong pending SBF");
+        pendingSBFPlayer1 = await farmingCenterInst.pendingSBF(0, player1);
+        assert.equal(web3.utils.toBN(pendingSBFPlayer1).eq(web3.utils.toBN("666666666666").mul(web3.utils.toBN(1e7))), true, "wrong pending SBF");
+        let pendingSBFPlayer2 = await farmingCenterInst.pendingSBF(0, player2);
+        assert.equal(web3.utils.toBN(pendingSBFPlayer2).eq(web3.utils.toBN("0").mul(web3.utils.toBN(1e18))), true, "wrong pending SBF");
+
+        let playerSBFBalancePreDeposit = await sbfInst.balanceOf(player0);
+        await farmingCenterInst.deposit(0, web3.utils.toBN("0").mul(web3.utils.toBN(1e18)), {from: player0});
+        let playerSBFBalanceAfterDeposit = await sbfInst.balanceOf(player0);
+        assert.equal(web3.utils.toBN("34999999999990000000").mul(web3.utils.toBN(3)).div(web3.utils.toBN(10)).eq(web3.utils.toBN(playerSBFBalanceAfterDeposit).sub(web3.utils.toBN(playerSBFBalancePreDeposit))), true, "wrong sbf reward");
+
+        let playerSBFBalancePreWithdraw = await sbfInst.balanceOf(player0);
+        await farmingCenterInst.withdraw(0, web3.utils.toBN("0").mul(web3.utils.toBN(1e18)), {from: player0});
+        let playerSBFBalanceAfterWithdraw = await sbfInst.balanceOf(player0);
+        assert.equal(web3.utils.toBN("1666666666660000000").mul(web3.utils.toBN(3)).div(web3.utils.toBN(10)).eq(web3.utils.toBN(playerSBFBalanceAfterWithdraw).sub(web3.utils.toBN(playerSBFBalancePreWithdraw))), true, "wrong sbf reward");
+
+        const farmRewardLockInst = await FarmRewardLock.deployed();
+        const farmRewardLockInfo = await farmRewardLockInst.userLockInfos(player0);
+        assert.equal(web3.utils.toBN("34999999999990000000").add(web3.utils.toBN("1666666666660000000")).mul(web3.utils.toBN(7)).div(web3.utils.toBN(10)).eq(web3.utils.toBN(farmRewardLockInfo.lockedAmount)), true, "wrong lock amount");
+        assert.equal(web3.utils.toBN("0").eq(web3.utils.toBN(farmRewardLockInfo.unlockedAmount)), true, "wrong lock amount");
+        assert.equal(web3.utils.toBN("0").eq(web3.utils.toBN(farmRewardLockInfo.lastUpdateHeight)), true, "wrong lastUpdateHeight");
     });
     // it('Test Deposit LBNB', async () => {
     //     deployerAccount = accounts[0];
