@@ -100,18 +100,6 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         _;
     }
 
-    modifier notContract() {
-        require(!isContract(msg.sender), "contract is not allowed");
-        require(msg.sender == tx.origin, "no proxy contract is allowed");
-        _;
-    }
-
-    function isContract(address addr) internal view returns (bool) {
-        uint size;
-        assembly { size := extcodesize(addr) }
-        return size > 0;
-    }
-
     function getMode() public view returns (uint8) {
         uint256 UTCTime = block.timestamp%86400;
         if (UTCTime<=600 || UTCTime>85200) {
@@ -221,7 +209,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         unstakeFeeDenominator = newUnstakeFeeDenominator;
     }
 
-    function stake(uint256 amount) notContract nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
+    function stake(uint256 amount) nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
 
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 
@@ -248,7 +236,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function unstake(uint256 amount) notContract nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external returns (bool) {
+    function unstake(uint256 amount) nonReentrant mustInMode(NORMAL_PERIOD) whenNotPaused external returns (bool) {
         uint256 unstakeFee = amount.mul(unstakeFeeMolecular).div(unstakeFeeDenominator);
         IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, unstakeFee);
 
