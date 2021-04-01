@@ -22,6 +22,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
 
     uint256 constant public MINIMUM_STAKE_AMOUNT = 1 * 1e18; // 1:BNB
     uint256 constant public EXCHANGE_RATE_PRECISION = 1e9;
+    uint256 constant public PRICE_TO_ACCELERATE_UNSTAKE_PRECISION = 1e9;
 
     address public LBNB;
     address public SBF;
@@ -266,10 +267,10 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return 0;
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
-        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
         for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
-            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
         }
         return sbfBurnAmount;
     }
@@ -281,11 +282,11 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         Unstake memory unstake = unstakesMap[unstakeIndex];
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
 
-        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
         for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
             unstakesMap[idx+1] = priorUnstake;
-            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
             uint256[] storage priorUnstakeSeqs = accountUnstakeSeqsMap[priorUnstake.staker];
             bool found = false;
             for(uint256 i=0; i < priorUnstakeSeqs.length; i++) {
