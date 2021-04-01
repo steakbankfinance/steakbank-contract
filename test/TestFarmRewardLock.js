@@ -21,7 +21,6 @@ contract('TestFarmRewardLock Contract', (accounts) => {
     it('Test FarmRewardLock', async () => {
         deployerAccount = accounts[0];
         initialGov = accounts[1];
-        rewardMaintainer = accounts[2];
         govGuardian = accounts[3];
         bcStakingTSS = accounts[4];
         player0 = accounts[5];
