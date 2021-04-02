@@ -36,8 +36,10 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(StakingRewardVault, SteakBank.address);
     await deployer.deploy(UnstakeVault, SteakBank.address);
 
-    await deployer.deploy(Timelock, initialGov, 5 * 86400);
+    await deployer.deploy(Timelock, initialGov, 10);
     await deployer.deploy(Governor, Timelock.address, SBF.address, govGuardian);
+    const timelockInst = await Timelock.deployed();
+    await timelockInst.setAdmin(Governor.address, {from: initialGov});
 
     const steakBankInst = await SteakBank.deployed();
     const farmRewardLockInst = await FarmRewardLock.deployed();

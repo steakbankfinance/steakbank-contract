@@ -17,10 +17,12 @@ contract Governor {
 
     /// @notice The delay before voting on a proposal may take place, once proposed
     function votingDelay() public pure returns (uint) { return 1; } // 1 block
-
+{% if mock %}
+    function votingPeriod() public pure returns (uint) { return 10; } // 10 block for test
+{% else %}
     /// @notice The duration of voting on a proposal, in blocks
     function votingPeriod() public pure returns (uint) { return 60 * 60 * 24 * 3 / 3; } // ~3 days in blocks (assuming 3s blocks)
-
+{% endif %}
     /// @notice The address of the Venus Protocol Timelock
     TimelockInterface public timelock;
 

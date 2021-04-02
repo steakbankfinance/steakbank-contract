@@ -34,6 +34,17 @@ contract('FarmingCenter Contract', (accounts) => {
         const sbfInst = await SBF.deployed();
         const farmingCenterInst = await FarmingCenter.deployed();
 
+        const sbfName = await sbfInst.name();
+        assert.equal(sbfName, "Steak Bank Finance", "wrong name");
+        const sbfSymbol = await sbfInst.symbol();
+        assert.equal(sbfSymbol, "SBF", "wrong symbol");
+        const sbfDecimals = await sbfInst.decimals();
+        assert.equal(sbfDecimals, "18", "wrong decimals");
+        const sbfTotalSupply = await sbfInst.totalSupply();
+        assert.equal(sbfTotalSupply, web3.utils.toBN(46000000).mul(web3.utils.toBN(1e18)).toString(), "wrong total supply");
+        const sbfOwner = await sbfInst.getOwner();
+        assert.equal(sbfOwner.toString(), FarmingCenter.address.toString(), "wrong owner");
+
         await sbfInst.transfer(player0, web3.utils.toBN("10000").mul(web3.utils.toBN(1e18)), {from: initialGov});
         await sbfInst.transfer(player1, web3.utils.toBN("20000").mul(web3.utils.toBN(1e18)), {from: initialGov});
         await sbfInst.transfer(player2, web3.utils.toBN("30000").mul(web3.utils.toBN(1e18)), {from: initialGov});
@@ -44,7 +55,6 @@ contract('FarmingCenter Contract', (accounts) => {
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("20000").mul(web3.utils.toBN(1e18)), {from: player1});
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("30000").mul(web3.utils.toBN(1e18)), {from: player2});
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("40000").mul(web3.utils.toBN(1e18)), {from: player3});
-        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("50000").mul(web3.utils.toBN(1e18)), {from: player4});
 
         await farmingCenterInst.deposit(0, web3.utils.toBN("10").mul(web3.utils.toBN(1e18)), {from: player0});
 

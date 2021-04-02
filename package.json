@@ -4,16 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "prepare-mainnet": "node prepare-governor-contract.js && node prepare-steakbank-contract.js && node prepare-timelock-contract.js",
+    "prepare-unitest": "node prepare-governor-contract.js --mock true && node prepare-steakbank-contract.js --mock true  && node prepare-timelock-contract.js --mock true ",
     "testrpc": "ganache-cli --gasLimit 13000000 -e 100000 --networkId 666",
     "truffle": "truffle",
     "compile": "truffle compile",
     "migrate": "truffle migrate",
-    "test": "node prepare-contract.js --mock true && truffle test && node prepare-contract.js",
-    "coverage": "node prepare-contract.js --mock true && truffle run coverage --network development && node prepare-contract.js",
+    "test": "npm run prepare-unitest && truffle test && npm run prepare-mainnet",
+    "coverage": "npm run prepare-unitest && truffle run coverage --network development &&  npm run prepare-mainnet",
     "lint": "npm run lint:sol",
     "lint:sol": "solhint 'contracts/*.sol' && solhint 'contracts/**/*.sol'",
-    "prepare-mainnet": "node prepare-contract.js",
-    "flatten": "node prepare-contract.js && truffle-flattener contracts/farm/FarmingCenterUpgradeableProxy.sol > flatten/FarmingCenterUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmingCenter.sol > flatten/FarmingCenter.sol && truffle-flattener contracts/farm/FarmRewardUpgradeableProxy.sol > flatten/FarmRewardUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmRewardLock.sol > flatten/FarmRewardLock.sol && truffle-flattener contracts/SteakBankUpgradeableProxy.sol > flatten/SteakBankUpgradeableProxy.sol && truffle-flattener contracts/governance/Timelock.sol > flatten/Timelock.sol && truffle-flattener contracts/governance/Governor.sol > flatten/Governor.sol && truffle-flattener contracts/LBNB.sol > flatten/LBNB.sol && truffle-flattener contracts/SBF.sol > flatten/SBF.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/SteakBankImpl.sol > flatten/SteakBankImpl.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
+    "flatten": "npm run prepare-unitest && truffle-flattener contracts/farm/FarmingCenterUpgradeableProxy.sol > flatten/FarmingCenterUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmingCenter.sol > flatten/FarmingCenter.sol && truffle-flattener contracts/farm/FarmRewardUpgradeableProxy.sol > flatten/FarmRewardUpgradeableProxy.sol && truffle-flattener contracts/farm/FarmRewardLock.sol > flatten/FarmRewardLock.sol && truffle-flattener contracts/SteakBankUpgradeableProxy.sol > flatten/SteakBankUpgradeableProxy.sol && truffle-flattener contracts/governance/Timelock.sol > flatten/Timelock.sol && truffle-flattener contracts/governance/Governor.sol > flatten/Governor.sol && truffle-flattener contracts/LBNB.sol > flatten/LBNB.sol && truffle-flattener contracts/SBF.sol > flatten/SBF.sol && truffle-flattener contracts/CommunityTaxVault.sol > flatten/CommunityTaxVault.sol && truffle-flattener contracts/SteakBankImpl.sol > flatten/SteakBankImpl.sol && truffle-flattener contracts/StakingRewardVault.sol > flatten/StakingRewardVault.sol && truffle-flattener contracts/UnstakeVault.sol > flatten/UnstakeVault.sol"
   },
   "author": "",
   "license": "Apache License",
