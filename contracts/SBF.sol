@@ -120,11 +120,10 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param account The initial account to grant all the tokens
      */
     constructor(address account) public {
-        _name = "Stake Bank Finance";
+        _name = "Steak Bank Finance";
         _symbol = "SBF";
         _decimals = 18;
-        _totalSupply = 46000000e18;
-        _balances[account] = _totalSupply;
+        _mint(account, 46000000e18);
         super.initializeOwner(account);
         emit Transfer(address(0), account, _totalSupply);
     }

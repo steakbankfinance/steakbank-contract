@@ -36,15 +36,19 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(StakingRewardVault, SteakBank.address);
     await deployer.deploy(UnstakeVault, SteakBank.address);
 
-    await deployer.deploy(Timelock, initialGov, 5 * 86400);
+    await deployer.deploy(Timelock, initialGov, 10);
     await deployer.deploy(Governor, Timelock.address, SBF.address, govGuardian);
+    const timelockInst = await Timelock.deployed();
+    await timelockInst.setAdmin(Governor.address, {from: initialGov});
 
     const steakBankInst = await SteakBank.deployed();
     const farmRewardLockInst = await FarmRewardLock.deployed();
     const farmingCenterInst = await FarmingCenter.deployed();
+    const sbfInst = await SBF.deployed();
 
     await steakBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
-    await farmRewardLockInst.initialize(SBF.address, "1000", "100", initialGov, FarmingCenter.address,  {from: deployerAccount});
-    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, "10000000000000000000", "500", "7", "10000000000", {from: deployerAccount});
+    await farmRewardLockInst.initialize(SBF.address, "100", "100", FarmingCenter.address, initialGov, {from: deployerAccount});
+    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, "10000000000000000000", "30", "7", "10", {from: deployerAccount});
+    await sbfInst.transferOwnership(FarmingCenter.address, {from: initialGov});
   });
 };
