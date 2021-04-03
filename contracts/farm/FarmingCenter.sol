@@ -243,4 +243,9 @@ contract FarmingCenter is Ownable {
         pool.molecularOfLockRate = molecular;
         pool.denominatorOfLockRate = denominator;
     }
+
+    function setSbfPerBlock(uint256 newSBFPerBlock) public onlyOwner {
+        sbfPerBlock = newSBFPerBlock;
+        massUpdatePools();
+    }
 }
