@@ -21,6 +21,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
     uint8 constant public NORMAL_PERIOD = 1;
 
     uint256 constant public MINIMUM_STAKE_AMOUNT = 1 * 1e18; // 1:BNB
+    uint256 constant public MINIMUM_UNSTAKE_AMOUNT = 8 * 1e17; // 0.8:BNB
     uint256 constant public EXCHANGE_RATE_PRECISION = 1e9;
     uint256 constant public PRICE_TO_ACCELERATE_UNSTAKE_PRECISION = 1e9;
 
@@ -209,7 +210,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 {% endif %}
         require(msg.value == amount.add(miniRelayFee), "msg.value must equal to amount + miniRelayFee");
-        require(amount%1e10==0 && amount>=MINIMUM_STAKE_AMOUNT, "stake amount must be N * 1e10 and greater than MINIMUM_STAKE_AMOUNT");
+        require(amount%1e10==0 && amount>=MINIMUM_STAKE_AMOUNT, "stake amount must be N * 1e10 and more than 1:BNB");
 
         uint256 stakeFee = amount.mul(stakeFeeMolecular).div(stakeFeeDenominator);
         communityTaxVault.transfer(stakeFee);
@@ -234,6 +235,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function unstake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) whenNotPaused external returns (bool) {
+        require(amount>=MINIMUM_UNSTAKE_AMOUNT, "unstake amount must be more than 0.8:BNB");
         uint256 unstakeFee = amount.mul(unstakeFeeMolecular).div(unstakeFeeDenominator);
         IERC20(LBNB).safeTransferFrom(msg.sender, communityTaxVault, unstakeFee);
 
