@@ -55,6 +55,7 @@ contract('FarmingCenter Contract', (accounts) => {
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("20000").mul(web3.utils.toBN(1e18)), {from: player1});
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("30000").mul(web3.utils.toBN(1e18)), {from: player2});
         await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("40000").mul(web3.utils.toBN(1e18)), {from: player3});
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("50000").mul(web3.utils.toBN(1e18)), {from: player4});
 
         await farmingCenterInst.deposit(0, web3.utils.toBN("10").mul(web3.utils.toBN(1e18)), {from: player0});
 

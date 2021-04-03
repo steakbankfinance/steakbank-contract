@@ -29,6 +29,17 @@ contract('SteakBank Contract', (accounts) => {
         const steakBankInst = await SteakBank.deployed();
         const lbnbInst = await LBNB.deployed();
 
+        const lbnbName = await lbnbInst.name();
+        assert.equal(lbnbName, "Liquidity Staked BNB", "wrong name");
+        const lbnbSymbol = await lbnbInst.symbol();
+        assert.equal(lbnbSymbol, "LBNB", "wrong symbol");
+        const lbnbDecimals = await lbnbInst.decimals();
+        assert.equal(lbnbDecimals, "18", "wrong decimals");
+        const totalSupply = await lbnbInst.totalSupply();
+        assert.equal(totalSupply.toString(), "0", "wrong total supply");
+        const lbnbOwner = await lbnbInst.getOwner();
+        assert.equal(lbnbOwner.toString(), SteakBank.address, "wrong owner");
+
         const relayerFee = web3.utils.toBN(2e16);
 
         const tssInitialBalance = await web3.eth.getBalance(bcStakingTSS);
