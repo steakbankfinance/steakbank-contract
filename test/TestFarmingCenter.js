@@ -233,4 +233,33 @@ contract('FarmingCenter Contract', (accounts) => {
         const afterClaimPlayer1Balance = await sbfInst.balanceOf(player1);
         assert.equal(afterClaimPlayer1Balance.sub(beforeClaimPlayer1Balance).eq(web3.utils.toBN("3579917508178068553")), true, "wrong claim amount")
     });
+    it('Test Farming End', async () => {
+        deployerAccount = accounts[0];
+        initialGov = accounts[1];
+        govGuardian = accounts[3];
+        bcStakingTSS = accounts[4];
+        player0 = accounts[5];
+        player1 = accounts[6];
+        player2 = accounts[7];
+        player3 = accounts[8];
+        player4 = accounts[9];
+
+        const steakBankInst = await SteakBank.deployed();
+        const lbnbInst = await LBNB.deployed();
+        const sbfInst = await SBF.deployed();
+        const farmingCenterInst = await FarmingCenter.deployed();
+        const farmRewardLockInst = await FarmRewardLock.deployed();
+
+        await time.advanceBlockTo(360);
+
+        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player0});
+        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player1});
+        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player2});
+        await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player0});
+        await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player1});
+        await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player2});
+
+        const sbfTotalSupply = await sbfInst.totalSupply();
+        assert.equal(sbfTotalSupply.sub(web3.utils.toBN(46000000).mul(web3.utils.toBN(1e18))), "3194999999999850000000", "wrong sbf total supply"); //approximately 10 * （350 - 30）
+    });
 });

@@ -33,12 +33,13 @@ contract FarmingCenter is Ownable {
     IMintBurnToken public sbf;
     IFarmRewardLock public farmRewardLock;
     uint256 public sbfPerBlock;
-    uint256 public bonus_multiplier;
+    uint256 public bonusMultiplier;
 
     PoolInfo[] public poolInfo;
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     uint256 public totalAllocPoint = 0;
     uint256 public startBlock;
+    uint256 public endBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
@@ -52,6 +53,7 @@ contract FarmingCenter is Ownable {
         IFarmRewardLock _farmRewardLock,
         uint256 _sbfPerBlock,
         uint256 _startBlock,
+        uint256 _endBlock,
         uint256 _molecularOfLockRate,
         uint256 _denominatorOfLockRate
     ) public
@@ -64,7 +66,11 @@ contract FarmingCenter is Ownable {
         sbf = _sbf;
         farmRewardLock = _farmRewardLock;
         sbfPerBlock = _sbfPerBlock;
+
+        require(_endBlock > _startBlock && _startBlock > block.number, "invalid _startBlock or _endBlock");
+        
         startBlock = _startBlock;
+        endBlock = _endBlock;
 
         require(_denominatorOfLockRate>0&&_denominatorOfLockRate>=_molecularOfLockRate, "invalid _denominatorOfLockRate or _molecularOfLockRate");
 
@@ -78,11 +84,20 @@ contract FarmingCenter is Ownable {
             }));
 
         totalAllocPoint = 1000;
-        bonus_multiplier = 1;
+        bonusMultiplier = 1;
     }
 
-    function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
-        bonus_multiplier = multiplierNumber;
+    function updateMultiplier(uint256 newBonusMultiplier) public onlyOwner {
+        bonusMultiplier = newBonusMultiplier;
+    }
+
+    function updateEndBlock(uint256 newEndBlock) public onlyOwner {
+        endBlock = newEndBlock;
+    }
+    
+    function updateSbfPerBlock(uint256 newSBFPerBlock) public onlyOwner {
+        massUpdatePools();
+        sbfPerBlock = newSBFPerBlock;
     }
 
     function poolLength() external view returns (uint256) {
@@ -133,7 +148,13 @@ contract FarmingCenter is Ownable {
     }
 
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        return _to.sub(_from).mul(bonus_multiplier);
+        if (_to <= endBlock) {
+            return _to.sub(_from).mul(bonusMultiplier);
+        } else if (_from >= endBlock) {
+            return 0;
+        } else {
+            return endBlock.sub(_from).mul(bonusMultiplier);
+        }
     }
 
     function pendingSBF(uint256 _pid, address _user) external view returns (uint256) {
@@ -242,10 +263,5 @@ contract FarmingCenter is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         pool.molecularOfLockRate = molecular;
         pool.denominatorOfLockRate = denominator;
-    }
-
-    function setSbfPerBlock(uint256 newSBFPerBlock) public onlyOwner {
-        sbfPerBlock = newSBFPerBlock;
-        massUpdatePools();
     }
 }
