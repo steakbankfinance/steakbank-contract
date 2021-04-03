@@ -125,7 +125,6 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
         _decimals = 18;
         _mint(account, 46000000e18);
         super.initializeOwner(account);
-        emit Transfer(address(0), account, _totalSupply);
     }
 
     /**
