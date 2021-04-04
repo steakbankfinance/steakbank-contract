@@ -153,19 +153,19 @@ contract FarmingCenter is Ownable {
     }
 
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_from >= endBlock) {
+        if (_from>=endBlock) {
             return 0;
         }
-        if (_from >=  initialBonusEndBlock) {
+        if (_from >= initialBonusEndBlock) {
             if (_to <= endBlock) {
                 return _to.sub(_from);
             } else {
                 return endBlock.sub(_from);
             }
         }
-        if (_to <= initialBonusEndBlock) {
+        if (_to <=initialBonusEndBlock) {
             return _to.sub(_from).mul(initialBonusMultiplier);
-        } else if ( _to <= endBlock ) {
+        } else if (_to <=endBlock) {
             return initialBonusEndBlock.sub(_from).mul(initialBonusMultiplier).add(_to.sub(initialBonusEndBlock));
         } else {
             return initialBonusEndBlock.sub(_from).mul(initialBonusMultiplier).add(endBlock.sub(initialBonusEndBlock));
