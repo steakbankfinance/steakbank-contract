@@ -312,52 +312,6 @@ contract('SteakBank Contract', (accounts) => {
         const afterResendBCStakingTSS = await web3.eth.getBalance(bcStakingTSS);
         assert.equal(web3.utils.toBN(afterResendBCStakingTSS).sub(web3.utils.toBN(beforeResendBCStakingTSS)), "1020000000000000000", "wrong resend result");
     });
-    it('Test set parameters about fee', async () => {
-        initialGov = accounts[1];
-
-        const steakBankInst = await SteakBank.deployed();
-
-        try {
-            await steakBankInst.setStakeFeeMolecular(1001, {from: initialGov});
-            assert.fail();
-        } catch (error) {
-            assert.ok(error.toString().includes("invalid stakeFeeMolecular"));
-        }
-
-        await steakBankInst.setStakeFeeMolecular(100, {from: initialGov});
-
-        try {
-            await steakBankInst.setStakeFeeDenominator(90, {from: initialGov});
-            assert.fail();
-        } catch (error) {
-            assert.ok(error.toString().includes("invalid stakeFeeDenominator"));
-        }
-
-        await steakBankInst.setStakeFeeDenominator(200, {from: initialGov});
-
-        try {
-            await steakBankInst.setUnstakeFeeMolecular(1001, {from: initialGov});
-            assert.fail();
-        } catch (error) {
-            assert.ok(error.toString().includes("invalid unstakeFeeMolecular"));
-        }
-
-        await steakBankInst.setUnstakeFeeMolecular(100, {from: initialGov});
-
-        try {
-            await steakBankInst.setUnstakeFeeDenominator(90, {from: initialGov});
-            assert.fail();
-        } catch (error) {
-            assert.ok(error.toString().includes("invalid unstakeFeeDenominator"));
-        }
-
-        await steakBankInst.setUnstakeFeeDenominator(200, {from: initialGov});
-
-        await steakBankInst.setStakeFeeMolecular(1, {from: initialGov});
-        await steakBankInst.setStakeFeeDenominator(1000, {from: initialGov});
-        await steakBankInst.setUnstakeFeeMolecular(1, {from: initialGov});
-        await steakBankInst.setUnstakeFeeDenominator(1000, {from: initialGov});
-    });
 
     it('Test transfer admin', async () => {
         deployerAccount = accounts[0];

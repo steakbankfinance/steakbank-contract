@@ -183,26 +183,6 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
-    function setStakeFeeMolecular(uint256 newStakeFeeMolecular) onlyAdmin external {
-        require(stakeFeeDenominator>newStakeFeeMolecular , "invalid stakeFeeMolecular");
-        stakeFeeMolecular = newStakeFeeMolecular;
-    }
-
-    function setStakeFeeDenominator(uint256 newStakeFeeDenominator) onlyAdmin external {
-        require(newStakeFeeDenominator>stakeFeeMolecular&&newStakeFeeDenominator!=0 , "invalid stakeFeeDenominator");
-        stakeFeeDenominator = newStakeFeeDenominator;
-    }
-
-    function setUnstakeFeeMolecular(uint256 newUnstakeFeeMolecular) onlyAdmin external {
-        require(unstakeFeeDenominator>newUnstakeFeeMolecular , "invalid unstakeFeeMolecular");
-        unstakeFeeMolecular = newUnstakeFeeMolecular;
-    }
-
-    function setUnstakeFeeDenominator(uint256 newUnstakeFeeDenominator) onlyAdmin external {
-        require(newUnstakeFeeDenominator>unstakeFeeMolecular&&newUnstakeFeeDenominator!=0 , "invalid unstakeFeeDenominator");
-        unstakeFeeDenominator = newUnstakeFeeDenominator;
-    }
-
     function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
 {% if mock %}
         uint256 miniRelayFee = 2e16;
