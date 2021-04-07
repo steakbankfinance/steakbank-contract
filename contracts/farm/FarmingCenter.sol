@@ -195,6 +195,7 @@ contract FarmingCenter is Ownable {
     }
 
     function updatePool(uint256 _pid) public {
+        require(_pid < poolInfo.length, "invalid pool id");
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) {
             return;
@@ -211,6 +212,7 @@ contract FarmingCenter is Ownable {
     }
 
     function deposit(uint256 _pid, uint256 _amount) public {
+        require(_pid < poolInfo.length, "invalid pool id");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -232,6 +234,7 @@ contract FarmingCenter is Ownable {
     }
 
     function withdraw(uint256 _pid, uint256 _amount) public {
+        require(_pid < poolInfo.length, "invalid pool id");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         uint256 reward;
@@ -254,6 +257,7 @@ contract FarmingCenter is Ownable {
     }
 
     function emergencyWithdraw(uint256 _pid) public {
+        require(_pid < poolInfo.length, "invalid pool id");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
