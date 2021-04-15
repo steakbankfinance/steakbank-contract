@@ -39,8 +39,8 @@ contract FarmingCenter is Ownable {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     uint256 public totalAllocPoint = 0;
     uint256 public startBlock;
-    uint256 public initialBonusEndBlock;
     uint256 public endBlock;
+    uint256 public blindFarmingEndBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
@@ -51,14 +51,10 @@ contract FarmingCenter is Ownable {
     function initialize(
         address _owner,
         IMintBurnToken _sbf,
-        IFarmRewardLock _farmRewardLock,
         uint256 _sbfPerBlock,
         uint256 _startBlock,
-        uint256 _farmingPeriodBlock,
-        uint256 _initialBonusPeriodBlock,
-        uint256 _initialBonusMultiplier,
-        uint256 _molecularOfLockRate,
-        uint256 _denominatorOfLockRate
+        uint256 _endBlock,
+        IFarmRewardLock _farmRewardLock
     ) public
     {
         require(!initialized, "already initialized");
@@ -68,39 +64,14 @@ contract FarmingCenter is Ownable {
 
         sbf = _sbf;
         farmRewardLock = _farmRewardLock;
+
         sbfPerBlock = _sbfPerBlock;
-
-        require(_startBlock > block.number, "invalid _startBlock");
-        
         startBlock = _startBlock;
-        initialBonusEndBlock = _startBlock.add(_initialBonusPeriodBlock);
-        endBlock = _startBlock.add(_farmingPeriodBlock);
-
-        require(_denominatorOfLockRate>0&&_denominatorOfLockRate>=_molecularOfLockRate, "invalid _denominatorOfLockRate or _molecularOfLockRate");
-
-        poolInfo.push(PoolInfo({
-            lpToken: IBEP20(address(_sbf)),
-            allocPoint: 1000,
-            lastRewardBlock: startBlock,
-            accSBFPerShare: 0,
-            molecularOfLockRate: _molecularOfLockRate,
-            denominatorOfLockRate: _denominatorOfLockRate
-            }));
-
-        totalAllocPoint = 1000;
-        initialBonusMultiplier = _initialBonusMultiplier;
+        endBlock = _endBlock;
+        blindFarmingEndBlock = _startBlock.add(86400); //3 second per block, first three is blind farming
     }
 
-    function updateInitialBonusMultiplier(uint256 newInitialBonusMultiplier) public onlyOwner {
-        massUpdatePools();
-        initialBonusMultiplier = newInitialBonusMultiplier;
-    }
-
-    function updateEndBlock(uint256 newEndBlock) public onlyOwner {
-        endBlock = newEndBlock;
-    }
-    
-    function updateSbfPerBlock(uint256 newSBFPerBlock) public onlyOwner {
+    function updateFarmingRewardPerBlock(uint256 newSBFPerBlock) public onlyOwner {
         massUpdatePools();
         sbfPerBlock = newSBFPerBlock;
     }
@@ -154,23 +125,14 @@ contract FarmingCenter is Ownable {
         }
     }
 
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_from>=endBlock) {
+    // Return reward multiplier over the given _from to _to block.
+    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256) {
+        if (_to <= endBlock) {
+            return _to.sub(_from);
+        } else if (_from >= endBlock) {
             return 0;
-        }
-        if (_from >= initialBonusEndBlock) {
-            if (_to <= endBlock) {
-                return _to.sub(_from);
-            } else {
-                return endBlock.sub(_from);
-            }
-        }
-        if (_to <=initialBonusEndBlock) {
-            return _to.sub(_from).mul(initialBonusMultiplier);
-        } else if (_to <=endBlock) {
-            return initialBonusEndBlock.sub(_from).mul(initialBonusMultiplier).add(_to.sub(initialBonusEndBlock));
         } else {
-            return initialBonusEndBlock.sub(_from).mul(initialBonusMultiplier).add(endBlock.sub(initialBonusEndBlock));
+            return endBlock.sub(_from);
         }
     }
 
@@ -269,6 +231,11 @@ contract FarmingCenter is Ownable {
     function rewardSBF(address _to, uint256 _amount, uint256 molecularOfLockRate, uint256 denominatorOfLockRate) internal returns (uint256, uint256) {
         uint256 farmingReward = _amount;
         uint256 lockedAmount = 0;
+        if (block.number <= blindFarmingEndBlock) {
+            sbf.mintTo(address(farmRewardLock), _amount);
+            farmRewardLock.notifyDeposit(_to, _amount);
+            return (0, _amount);
+        }
         if (block.number < farmRewardLock.getLockEndHeight()) {
             lockedAmount = farmingReward.mul(molecularOfLockRate).div(denominatorOfLockRate);
             farmingReward = farmingReward.sub(lockedAmount);
