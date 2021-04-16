@@ -1,7 +1,6 @@
 pragma solidity 0.6.12;
 
 import "../lib/Ownable.sol";
-import "../interface/IFarmRewardLock.sol";
 
 import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
@@ -28,7 +27,6 @@ contract BlindFarmingCenter is Ownable {
     bool public initialized;
 
     IBEP20 public sbf;
-    IFarmRewardLock public blindFarmRewardLock;
     uint256 public sbfPerBlock;
     uint256 public releaseHeight;
     mapping(address => uint256) public userLockedRewardAmount;
@@ -48,25 +46,34 @@ contract BlindFarmingCenter is Ownable {
 
     function initialize(
         address _owner,
-        IBEP20 _sbf,
-        uint256 _sbfPerBlock,
-        uint256 _startBlock,
-        uint256 _endBlock,
-        IFarmRewardLock _blindFarmRewardLock
+        IBEP20 _sbf
     ) public
     {
         require(!initialized, "already initialized");
         initialized = true;
 
         super.initializeOwner(_owner);
-
         sbf = _sbf;
-        blindFarmRewardLock = _blindFarmRewardLock;
-
-        sbfPerBlock = _sbfPerBlock;
-        startBlock = _startBlock;
-        endBlock = _endBlock;
+        sbfPerBlock = 0;
+        startBlock = 0;
+        endBlock = 0;
         releaseHeight = uint256(-1);
+    }
+
+    function startBindFarming(uint256 sbfRewardPerBlock, uint256 startHeight, uint256 farmingPeriod) public onlyOwner {
+        require(block.number < startHeight, "startHeight must be larger than current block height");
+        massUpdatePools();
+
+        uint256 sbfAmount = sbfRewardPerBlock.mul(farmingPeriod);
+        sbf.safeTransferFrom(msg.sender, address(this), sbfAmount);
+        sbfPerBlock = sbfRewardPerBlock;
+        startBlock = startHeight;
+        endBlock = startHeight.add(farmingPeriod);
+
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            PoolInfo storage pool = poolInfo[pid];
+            pool.lastRewardBlock = startHeight;
+        }
     }
 
     function increaseBlindFarmingReward(uint256 increasedRewardPerBlock) public onlyOwner {
@@ -252,7 +259,7 @@ contract BlindFarmingCenter is Ownable {
     }
 
     function setReleaseHeight(uint256 newReleaseHeight) public onlyOwner {
-        require(releaseHeight > block.number, "release height must be in the future");
+        require(releaseHeight > block.number, "release height must be larger than current height");
         releaseHeight = newReleaseHeight;
     }
 

@@ -31,13 +31,14 @@ contract FarmingCenter is Ownable {
 
     IBEP20 public sbf;
     IFarmRewardLock public farmRewardLock;
+    
     uint256 public sbfPerBlock;
+    uint256 public totalAllocPoint;
+    uint256 public startBlock;
+    uint256 public endBlock;
 
     PoolInfo[] public poolInfo;
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
-    uint256 public totalAllocPoint = 0;
-    uint256 public startBlock;
-    uint256 public endBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
@@ -55,22 +56,12 @@ contract FarmingCenter is Ownable {
         initialized = true;
 
         super.initializeOwner(_owner);
-
-        sbf = _sbf;
         farmRewardLock = _farmRewardLock;
-
+        sbf = _sbf;
         sbfPerBlock = 0;
         startBlock = 0;
         endBlock = 0;
-    }
-
-    function increaseFarmingReward(uint256 increasedRewardPerBlock) public onlyOwner {
-        require(block.number < endBlock, "Previous farming is already completed");
-        massUpdatePools();
-
-        uint256 sbfAmount = increasedRewardPerBlock.mul(endBlock.sub(block.number));
-        sbf.safeTransferFrom(msg.sender, address(this), sbfAmount);
-        sbfPerBlock = sbfPerBlock.add(increasedRewardPerBlock);
+        totalAllocPoint = 0;
     }
 
     function addNewFarmingPeriod(uint256 farmingPeriod, uint256 startHeight, uint256 sbfRewardPerBlock) public onlyOwner {
@@ -78,6 +69,7 @@ contract FarmingCenter is Ownable {
         require(block.number <= startHeight, "Start height must be in the future");
         require(sbfRewardPerBlock > 0, "sbfRewardPerBlock must be larger than 0");
         require(farmingPeriod > 0, "farmingPeriod must be larger than 0");
+        
         massUpdatePools();
 
         uint256 totalSBFAmount = farmingPeriod.mul(sbfRewardPerBlock);
@@ -91,6 +83,15 @@ contract FarmingCenter is Ownable {
             PoolInfo storage pool = poolInfo[pid];
             pool.lastRewardBlock = startHeight;
         }
+    }
+
+    function increaseFarmingReward(uint256 increasedSBFRewardPerBlock) public onlyOwner {
+        require(block.number < endBlock, "Previous farming is already completed");
+        massUpdatePools();
+
+        uint256 sbfAmount = increasedSBFRewardPerBlock.mul(endBlock.sub(block.number));
+        sbf.safeTransferFrom(msg.sender, address(this), sbfAmount);
+        sbfPerBlock = sbfPerBlock.add(increasedSBFRewardPerBlock);
     }
 
     function poolLength() external view returns (uint256) {
