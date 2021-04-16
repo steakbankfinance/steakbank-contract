@@ -195,7 +195,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
-    function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
+    function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) notContract whenNotPaused external payable returns (bool) {
 
         uint256 miniRelayFee = ITokenHub(TOKENHUB_ADDR).getMiniRelayFee();
 

@@ -195,7 +195,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
-    function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) whenNotPaused external payable returns (bool) {
+    function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) notContract whenNotPaused external payable returns (bool) {
 {% if mock %}
         uint256 miniRelayFee = 2e16;
 {% else %}
@@ -251,22 +251,24 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256) {
+    function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256, uint256) {
         if (steps == 0) return 0;
         if (unstakeIndex<steps) return 0;
         if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return 0;
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
         uint256 timestampThreshold = unstake.timestamp.sub(unstake.timestamp.mod(86400));
-        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        uint256 actualSteps = 0;
         for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
             if (priorUnstake.timestamp<timestampThreshold) {
                 break;
             }
-            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
+            actualSteps++;
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
         }
-        return sbfBurnAmount;
+        return actualSteps, sbfBurnAmount.div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
     }
 
     function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps, uint256 sbfMaxCost) nonReentrant whenNotPaused external returns (bool) {
