@@ -7,7 +7,7 @@ import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 
-contract FarmingCenter is Ownable {
+contract BlindFarmingCenter is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
@@ -21,8 +21,6 @@ contract FarmingCenter is Ownable {
         uint256 allocPoint;
         uint256 lastRewardBlock;
         uint256 accSBFPerShare;
-        uint256 molecularOfLockRate;
-        uint256 denominatorOfLockRate;
     }
 
     uint256 constant public REWARD_CALCULATE_PRECISION = 1e12;
@@ -30,8 +28,10 @@ contract FarmingCenter is Ownable {
     bool public initialized;
 
     IBEP20 public sbf;
-    IFarmRewardLock public farmRewardLock;
+    IFarmRewardLock public blindFarmRewardLock;
     uint256 public sbfPerBlock;
+    uint256 public releaseHeight;
+    mapping(address => uint256) public userLockedRewardAmount;
 
     PoolInfo[] public poolInfo;
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
@@ -39,16 +39,20 @@ contract FarmingCenter is Ownable {
     uint256 public startBlock;
     uint256 public endBlock;
 
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward, uint256 lockedReward);
+    event Deposit(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward);
+    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event Reward(address indexed user, uint256 reward);
 
     constructor() public {}
 
     function initialize(
         address _owner,
         IBEP20 _sbf,
-        IFarmRewardLock _farmRewardLock
+        uint256 _sbfPerBlock,
+        uint256 _startBlock,
+        uint256 _endBlock,
+        IFarmRewardLock _blindFarmRewardLock
     ) public
     {
         require(!initialized, "already initialized");
@@ -57,14 +61,15 @@ contract FarmingCenter is Ownable {
         super.initializeOwner(_owner);
 
         sbf = _sbf;
-        farmRewardLock = _farmRewardLock;
+        blindFarmRewardLock = _blindFarmRewardLock;
 
-        sbfPerBlock = 0;
-        startBlock = 0;
-        endBlock = 0;
+        sbfPerBlock = _sbfPerBlock;
+        startBlock = _startBlock;
+        endBlock = _endBlock;
+        releaseHeight = uint256(-1);
     }
 
-    function increaseFarmingReward(uint256 increasedRewardPerBlock) public onlyOwner {
+    function increaseBlindFarmingReward(uint256 increasedRewardPerBlock) public onlyOwner {
         require(block.number < endBlock, "Previous farming is already completed");
         massUpdatePools();
 
@@ -73,32 +78,29 @@ contract FarmingCenter is Ownable {
         sbfPerBlock = sbfPerBlock.add(increasedRewardPerBlock);
     }
 
-    function addNewFarmingPeriod(uint256 farmingPeriod, uint256 startHeight, uint256 sbfRewardPerBlock) public onlyOwner {
-        require(block.number > endBlock, "Previous farming is not completed yet");
-        require(block.number <= startHeight, "Start height must be in the future");
-        require(sbfRewardPerBlock > 0, "sbfRewardPerBlock must be larger than 0");
-        require(farmingPeriod > 0, "farmingPeriod must be larger than 0");
+    function extendBlindFarmingPeriod(uint256 extendBlockNumber) public onlyOwner {
+        require(block.number < endBlock, "Previous farming is already completed");
         massUpdatePools();
 
-        uint256 totalSBFAmount = farmingPeriod.mul(sbfRewardPerBlock);
-        sbf.safeTransferFrom(msg.sender, address(this), totalSBFAmount);
+        uint256 sbfAmount = sbfPerBlock.mul(extendBlockNumber);
+        sbf.safeTransferFrom(msg.sender, address(this), sbfAmount);
+        endBlock = endBlock.add(extendBlockNumber);
+    }
 
-        sbfPerBlock = sbfRewardPerBlock;
-        startBlock = startHeight;
-        endBlock = startHeight.add(farmingPeriod);
+    function trimBlindFarmingPeriod(uint256 trimBlockNumber) public onlyOwner {
+        require(block.number < endBlock.sub(trimBlockNumber), "Trim too many blocks");
+        massUpdatePools();
 
-        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
-            PoolInfo storage pool = poolInfo[pid];
-            pool.lastRewardBlock = startHeight;
-        }
+        uint256 sbfAmount = sbfPerBlock.mul(trimBlockNumber);
+        sbf.safeTransferFrom(address(this), msg.sender, sbfAmount);
+        endBlock = endBlock.sub(trimBlockNumber);
     }
 
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
 
-    function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate, uint256 molecularOfLockRate, uint256 denominatorOfLockRate) public onlyOwner {
-        require(denominatorOfLockRate>0&&denominatorOfLockRate>=molecularOfLockRate, "invalid denominatorOfLockRate or molecularOfLockRate");
+    function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -108,10 +110,8 @@ contract FarmingCenter is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accSBFPerShare: 0,
-            molecularOfLockRate: molecularOfLockRate,
-            denominatorOfLockRate: denominatorOfLockRate
-            }));
+            accSBFPerShare: 0
+        }));
         updateSBFPool();
     }
 
@@ -195,13 +195,12 @@ contract FarmingCenter is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        uint256 reward;
-        uint256 lockedReward;
+        uint256 pending;
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION).sub(user.rewardDebt);
+            pending = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION).sub(user.rewardDebt);
 
             if (pending > 0) {
-                (reward, lockedReward) = rewardSBF(msg.sender, pending, pool.molecularOfLockRate, pool.denominatorOfLockRate);
+                rewardSBF(msg.sender, pending);
             }
         }
         if (_amount > 0) {
@@ -209,7 +208,7 @@ contract FarmingCenter is Ownable {
             user.amount = user.amount.add(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION);
-        emit Deposit(msg.sender, _pid, _amount, reward, lockedReward);
+        emit Deposit(msg.sender, _pid, _amount, pending);
     }
 
     function withdraw(uint256 _pid, uint256 _amount) public {
@@ -217,14 +216,13 @@ contract FarmingCenter is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         uint256 reward;
-        uint256 lockedReward;
         require(user.amount >= _amount, "withdraw: not good");
 
         updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION).sub(user.rewardDebt);
 
         if (pending > 0) {
-            (reward, lockedReward) = rewardSBF(msg.sender, pending, pool.molecularOfLockRate, pool.denominatorOfLockRate);
+            rewardSBF(msg.sender, pending);
         }
 
         if (_amount > 0) {
@@ -232,7 +230,7 @@ contract FarmingCenter is Ownable {
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION);
-        emit Withdraw(msg.sender, _pid, _amount, reward, lockedReward);
+        emit Withdraw(msg.sender, _pid, _amount, pending);
     }
 
     function emergencyWithdraw(uint256 _pid) public {
@@ -245,23 +243,25 @@ contract FarmingCenter is Ownable {
         user.rewardDebt = 0;
     }
 
-    function rewardSBF(address _to, uint256 _amount, uint256 molecularOfLockRate, uint256 denominatorOfLockRate) internal returns (uint256, uint256) {
-        uint256 farmingReward = _amount;
-        uint256 lockedAmount = 0;
-        if (block.number < farmRewardLock.getLockEndHeight()) {
-            lockedAmount = farmingReward.mul(molecularOfLockRate).div(denominatorOfLockRate);
-            farmingReward = farmingReward.sub(lockedAmount);
-            sbf.transfer(address(farmRewardLock), lockedAmount);
-            farmRewardLock.notifyDeposit(_to, lockedAmount);
+    function rewardSBF(address _to, uint256 _amount) internal {
+        if (block.number < releaseHeight) {
+            userLockedRewardAmount[_to] = userLockedRewardAmount[_to].add(_amount);
+        } else {
+            sbf.safeTransfer(_to, _amount);
         }
-        sbf.transfer(_to, farmingReward);
-        return (farmingReward, lockedAmount);
     }
 
-    function setPoolRewardLockRate(uint256 _pid, uint256 molecular, uint256 denominator) public onlyOwner {
-        require(denominator>0&&denominator>=molecular, "invalid molecular or denominator");
-        PoolInfo storage pool = poolInfo[_pid];
-        pool.molecularOfLockRate = molecular;
-        pool.denominatorOfLockRate = denominator;
+    function setReleaseHeight(uint256 newReleaseHeight) public onlyOwner {
+        require(releaseHeight > block.number, "release height must be in the future");
+        releaseHeight = newReleaseHeight;
+    }
+
+    function claimReward() public {
+        require(block.number>=releaseHeight, "release height is not reached");
+        uint256 reward = userLockedRewardAmount[msg.sender];
+        require(reward>0, "no reward");
+        userLockedRewardAmount[msg.sender] = 0;
+        sbf.safeTransfer(address(msg.sender), reward);
+        emit Reward(msg.sender, reward);
     }
 }
