@@ -252,9 +252,9 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
     }
 
     function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256, uint256) {
-        if (steps == 0) return 0;
-        if (unstakeIndex<steps) return 0;
-        if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return 0;
+        if (steps == 0) return (0, 0);
+        if (unstakeIndex<steps) return (0, 0);
+        if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return (0, 0);
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
         uint256 timestampThreshold = unstake.timestamp.sub(unstake.timestamp.mod(86400));
@@ -268,7 +268,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
             actualSteps++;
             sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
         }
-        return actualSteps, sbfBurnAmount.div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
+        return (actualSteps, sbfBurnAmount.div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
     }
 
     function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps, uint256 sbfMaxCost) nonReentrant whenNotPaused external returns (bool) {
