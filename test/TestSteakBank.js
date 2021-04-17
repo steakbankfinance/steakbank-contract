@@ -252,11 +252,13 @@ contract('SteakBank Contract', (accounts) => {
         await steakBankInst.setPriceToAccelerateUnstake(100, {from: initialGov})
         priceToAccelerateUnstake = await steakBankInst.priceToAccelerateUnstake();
         assert.equal(priceToAccelerateUnstake.toString(), "100", "wrong priceToAccelerateUnstake");
-        const costSBFAmount = await steakBankInst.estimateSBFCostForAccelerate(3, 2);
+        const estimateResult = await steakBankInst.estimateSBFCostForAccelerate(3, 2);
+        const costSBFAmount = estimateResult[1];
 
-        await steakBankInst.setPriceToAccelerateUnstake(10, {from: initialGov})
-        const requiredSBFAmount = await steakBankInst.estimateSBFCostForAccelerate(3, 2);
-        assert.equal(web3.utils.toBN(requiredSBFAmount).mul(web3.utils.toBN(10)).eq(web3.utils.toBN(costSBFAmount)),  true, "wrong priceToAccelerateUnstake");
+        await steakBankInst.setPriceToAccelerateUnstake(10, {from: initialGov});
+        const newEstimateResult = await steakBankInst.estimateSBFCostForAccelerate(3, 2);
+        const requiredSBFAmount = newEstimateResult[1];
+        assert.equal(web3.utils.toBN(requiredSBFAmount).mul(web3.utils.toBN(10)).toString(), costSBFAmount.toString(), "wrong priceToAccelerateUnstake");
 
         const sbfInst = await SBF.deployed();
         await sbfInst.transfer(player3, requiredSBFAmount, {from: initialGov});
