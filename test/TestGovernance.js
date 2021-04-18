@@ -85,7 +85,7 @@ contract('Governance Contract', (accounts) => {
         let currentVotes = await sbfInst.getCurrentVotes(player0);
         assert.equal(currentVotes.toString(), web3.utils.toBN(1e7).mul(web3.utils.toBN(1e18)).toString(), "wrong voting power");
         currentVotes = await sbfInst.getCurrentVotes(initialGov);
-        assert.equal(currentVotes.toString(), "26000000000000000000000000", "wrong voting power")
+        assert.equal(currentVotes.toString(), "80000000000000000000000000", "wrong voting power")
 
         const abiEncodeDataForSetPancakeRouterAddr = web3.eth.abi.encodeFunctionCall({
             "inputs": [

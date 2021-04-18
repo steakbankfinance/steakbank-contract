@@ -41,6 +41,7 @@ contract BlindFarmingCenter is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, uint256 reward);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event Reward(address indexed user, uint256 reward);
+    event LockedReward(address indexed user, uint256 reward);
 
     constructor() public {}
 
@@ -108,6 +109,7 @@ contract BlindFarmingCenter is Ownable {
     }
 
     function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate) public onlyOwner {
+        require(_lpToken!=sbf, "can't support SBF pool");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -150,7 +152,7 @@ contract BlindFarmingCenter is Ownable {
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= endBlock) {
             return _to.sub(_from);
         } else if (_from >= endBlock) {
@@ -207,7 +209,7 @@ contract BlindFarmingCenter is Ownable {
             pending = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION).sub(user.rewardDebt);
 
             if (pending > 0) {
-                rewardSBF(msg.sender, pending);
+                pending = rewardSBF(msg.sender, pending);
             }
         }
         if (_amount > 0) {
@@ -229,7 +231,7 @@ contract BlindFarmingCenter is Ownable {
         uint256 pending = user.amount.mul(pool.accSBFPerShare).div(REWARD_CALCULATE_PRECISION).sub(user.rewardDebt);
 
         if (pending > 0) {
-            rewardSBF(msg.sender, pending);
+            pending = rewardSBF(msg.sender, pending);
         }
 
         if (_amount > 0) {
@@ -250,11 +252,13 @@ contract BlindFarmingCenter is Ownable {
         user.rewardDebt = 0;
     }
 
-    function rewardSBF(address _to, uint256 _amount) internal {
+    function rewardSBF(address _to, uint256 _amount) internal returns(uint256) {
         if (block.number < releaseHeight) {
             userLockedRewardAmount[_to] = userLockedRewardAmount[_to].add(_amount);
+            emit LockedReward(_to, _amount);
+            return 0;
         } else {
-            sbf.safeTransfer(_to, _amount);
+            return safeTransferSBF(_to, _amount);
         }
     }
 
@@ -268,7 +272,18 @@ contract BlindFarmingCenter is Ownable {
         uint256 reward = userLockedRewardAmount[msg.sender];
         require(reward>0, "no reward");
         userLockedRewardAmount[msg.sender] = 0;
-        sbf.safeTransfer(address(msg.sender), reward);
-        emit Reward(msg.sender, reward);
+        uint256 actualReward = safeTransferSBF(address(msg.sender), reward);
+        emit Reward(msg.sender, actualReward);
+    }
+
+    function safeTransferSBF(address recipient, uint256 amount) internal returns(uint256) {
+        uint256 balance = sbf.balanceOf(address(this));
+        if (balance>=amount) {
+            sbf.safeTransfer(recipient, amount);
+            return amount;
+        } else {
+            sbf.safeTransfer(recipient, balance);
+            return balance;
+        }
     }
 }

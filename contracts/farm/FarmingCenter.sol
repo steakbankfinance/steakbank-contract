@@ -1,11 +1,8 @@
 pragma solidity 0.6.12;
 
+import "../lib/SBFRewardVault.sol";
 import "../lib/Ownable.sol";
 import "../interface/IFarmRewardLock.sol";
-
-import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
-import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
-import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 
 contract FarmingCenter is Ownable {
     using SafeMath for uint256;
@@ -30,6 +27,7 @@ contract FarmingCenter is Ownable {
     bool public initialized;
 
     IBEP20 public sbf;
+    SBFRewardVault public sbfRewardVault;
     IFarmRewardLock public farmRewardLock;
     
     uint256 public sbfPerBlock;
@@ -55,6 +53,8 @@ contract FarmingCenter is Ownable {
         require(!initialized, "already initialized");
         initialized = true;
 
+        sbfRewardVault = new SBFRewardVault(_sbf, address(this));
+
         super.initializeOwner(_owner);
         farmRewardLock = _farmRewardLock;
         sbf = _sbf;
@@ -73,7 +73,7 @@ contract FarmingCenter is Ownable {
         massUpdatePools();
 
         uint256 totalSBFAmount = farmingPeriod.mul(sbfRewardPerBlock);
-        sbf.safeTransferFrom(msg.sender, address(this), totalSBFAmount);
+        sbf.safeTransferFrom(msg.sender, address(sbfRewardVault), totalSBFAmount);
 
         sbfPerBlock = sbfRewardPerBlock;
         startBlock = startHeight;
@@ -90,7 +90,7 @@ contract FarmingCenter is Ownable {
         massUpdatePools();
 
         uint256 sbfAmount = increasedSBFRewardPerBlock.mul(endBlock.sub(block.number));
-        sbf.safeTransferFrom(msg.sender, address(this), sbfAmount);
+        sbf.safeTransferFrom(msg.sender, address(sbfRewardVault), sbfAmount);
         sbfPerBlock = sbfPerBlock.add(increasedSBFRewardPerBlock);
     }
 
@@ -144,7 +144,7 @@ contract FarmingCenter is Ownable {
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= endBlock) {
             return _to.sub(_from);
         } else if (_from >= endBlock) {
@@ -252,11 +252,11 @@ contract FarmingCenter is Ownable {
         if (block.number < farmRewardLock.getLockEndHeight()) {
             lockedAmount = farmingReward.mul(molecularOfLockRate).div(denominatorOfLockRate);
             farmingReward = farmingReward.sub(lockedAmount);
-            sbf.transfer(address(farmRewardLock), lockedAmount);
-            farmRewardLock.notifyDeposit(_to, lockedAmount);
+            uint256 actualAmount = sbfRewardVault.safeTransferSBF(address(farmRewardLock), lockedAmount);
+            farmRewardLock.notifyDeposit(_to, actualAmount);
         }
-        sbf.transfer(_to, farmingReward);
-        return (farmingReward, lockedAmount);
+        uint256 actualAmount = sbfRewardVault.safeTransferSBF(_to, farmingReward);
+        return (actualAmount, lockedAmount);
     }
 
     function setPoolRewardLockRate(uint256 _pid, uint256 molecular, uint256 denominator) public onlyOwner {

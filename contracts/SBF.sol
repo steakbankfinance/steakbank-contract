@@ -123,7 +123,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
         _name = "Steak Bank Finance";
         _symbol = "SBF";
         _decimals = 18;
-        _mint(account, 46000000e18);
+        _mint(account, 100000000e18);
         super.initializeOwner(account);
     }
 
