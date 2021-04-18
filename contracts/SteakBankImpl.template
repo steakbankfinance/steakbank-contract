@@ -251,18 +251,24 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         return true;
     }
 
-    function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256) {
-        if (steps == 0) return 0;
-        if (unstakeIndex<steps) return 0;
-        if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return 0;
+    function estimateSBFCostForAccelerate(uint256 unstakeIndex, uint256 steps) external view returns (uint256, uint256) {
+        if (steps == 0) return (0, 0);
+        if (unstakeIndex<steps) return (0, 0);
+        if ((unstakeIndex.sub(steps))<headerIdx || unstakeIndex>=tailIdx) return (0, 0);
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
-        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
+        uint256 timestampThreshold = unstake.timestamp.sub(unstake.timestamp.mod(86400));
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
+        uint256 actualSteps = 0;
         for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
-            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
+            if (priorUnstake.timestamp<timestampThreshold) {
+                break;
+            }
+            actualSteps++;
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
         }
-        return sbfBurnAmount;
+        return (actualSteps, sbfBurnAmount.div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
     }
 
     function accelerateUnstakedMature(uint256 unstakeIndex, uint256 steps, uint256 sbfMaxCost) nonReentrant whenNotPaused external returns (bool) {
@@ -271,12 +277,14 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
 
         Unstake memory unstake = unstakesMap[unstakeIndex];
         require(unstake.staker==msg.sender, "only staker can accelerate itself");
+        uint256 timestampThreshold = unstake.timestamp.sub(unstake.timestamp.mod(86400));
 
-        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
+        uint256 sbfBurnAmount = unstake.amount.mul(steps).mul(priceToAccelerateUnstake);
         for (uint256 idx = unstakeIndex.sub(1) ; idx >= unstakeIndex.sub(steps); idx--) {
             Unstake memory priorUnstake = unstakesMap[idx];
+            require(priorUnstake.timestamp>=timestampThreshold, "forbid to exceed unstake in prior day");
             unstakesMap[idx+1] = priorUnstake;
-            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake).div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION));
+            sbfBurnAmount = sbfBurnAmount.add(priorUnstake.amount.mul(priceToAccelerateUnstake));
             uint256[] storage priorUnstakeSeqs = accountUnstakeSeqsMap[priorUnstake.staker];
             bool found = false;
             for(uint256 i=0; i < priorUnstakeSeqs.length; i++) {
@@ -288,6 +296,7 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
             }
             require(found, "failed to find matched unstake sequence");
         }
+        sbfBurnAmount = sbfBurnAmount.div(PRICE_TO_ACCELERATE_UNSTAKE_PRECISION);
 
         uint256[] storage unstakeSeqs = accountUnstakeSeqsMap[msg.sender];
         unstakesMap[unstakeIndex.sub(steps)] = unstake;
