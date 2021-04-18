@@ -47,7 +47,9 @@ contract FarmingCenter is Ownable {
     function initialize(
         address _owner,
         IBEP20 _sbf,
-        IFarmRewardLock _farmRewardLock
+        IFarmRewardLock _farmRewardLock,
+        uint256 _molecularOfLockRate,
+        uint256 _denominatorOfLockRate
     ) public
     {
         require(!initialized, "already initialized");
@@ -61,7 +63,16 @@ contract FarmingCenter is Ownable {
         sbfPerBlock = 0;
         startBlock = 0;
         endBlock = 0;
-        totalAllocPoint = 0;
+
+        poolInfo.push(PoolInfo({
+            lpToken: IBEP20(address(_sbf)),
+            allocPoint: 1000,
+            lastRewardBlock: startBlock,
+            accSBFPerShare: 0,
+            molecularOfLockRate: _molecularOfLockRate,
+            denominatorOfLockRate: _denominatorOfLockRate
+        }));
+        totalAllocPoint = 1000;
     }
 
     function addNewFarmingPeriod(uint256 farmingPeriod, uint256 startHeight, uint256 sbfRewardPerBlock) public onlyOwner {

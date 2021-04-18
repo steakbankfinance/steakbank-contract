@@ -50,9 +50,8 @@ module.exports = function (deployer, network, accounts) {
     const sbfInst = await SBF.deployed();
 
     await steakBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
-    await farmRewardLockInst.initialize(SBF.address, "100", "100", FarmingCenter.address, initialGov, {from: deployerAccount});
-    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, {from: deployerAccount});
+    await farmRewardLockInst.initialize(SBF.address, "113", "100", FarmingCenter.address, initialGov, {from: deployerAccount});
+    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, 7, 10, {from: deployerAccount});
     await blindFarmingCenterInst.initialize(initialGov, SBF.address, {from: deployerAccount});
-    await sbfInst.transferOwnership(FarmingCenter.address, {from: initialGov});
   });
 };

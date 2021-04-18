@@ -19,6 +19,14 @@ const Web3 = require('web3');
 const truffleAssert = require('truffle-assertions');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
+const tokenPrecision = web3.utils.toBN(1e18);
+let farmingEndHeight;
+
+let player0InitialSBFBalance;
+let player1InitialSBFBalance;
+let player2InitialSBFBalance;
+let govInitialSBFBalance;
+
 contract('FarmingCenter Contract', (accounts) => {
     it('Test Deposit SBF', async () => {
         deployerAccount = accounts[0];
@@ -41,44 +49,61 @@ contract('FarmingCenter Contract', (accounts) => {
         const sbfDecimals = await sbfInst.decimals();
         assert.equal(sbfDecimals, "18", "wrong decimals");
         const sbfTotalSupply = await sbfInst.totalSupply();
-        assert.equal(sbfTotalSupply, web3.utils.toBN(46000000).mul(web3.utils.toBN(1e18)).toString(), "wrong total supply");
+        assert.equal(sbfTotalSupply, web3.utils.toBN(1e8).mul(tokenPrecision).toString(), "wrong total supply");
         const sbfOwner = await sbfInst.getOwner();
-        assert.equal(sbfOwner.toString(), FarmingCenter.address.toString(), "wrong owner");
+        assert.equal(sbfOwner.toString(), initialGov.toString(), "wrong owner");
 
-        await sbfInst.transfer(player0, web3.utils.toBN("10000").mul(web3.utils.toBN(1e18)), {from: initialGov});
-        await sbfInst.transfer(player1, web3.utils.toBN("20000").mul(web3.utils.toBN(1e18)), {from: initialGov});
-        await sbfInst.transfer(player2, web3.utils.toBN("30000").mul(web3.utils.toBN(1e18)), {from: initialGov});
-        await sbfInst.transfer(player3, web3.utils.toBN("40000").mul(web3.utils.toBN(1e18)), {from: initialGov});
-        await sbfInst.transfer(player4, web3.utils.toBN("50000").mul(web3.utils.toBN(1e18)), {from: initialGov});
+        await sbfInst.transfer(player0, web3.utils.toBN("10000").mul(tokenPrecision), {from: initialGov});
+        await sbfInst.transfer(player1, web3.utils.toBN("20000").mul(tokenPrecision), {from: initialGov});
+        await sbfInst.transfer(player2, web3.utils.toBN("30000").mul(tokenPrecision), {from: initialGov});
+        await sbfInst.transfer(player3, web3.utils.toBN("40000").mul(tokenPrecision), {from: initialGov});
+        await sbfInst.transfer(player4, web3.utils.toBN("50000").mul(tokenPrecision), {from: initialGov});
 
-        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("10000").mul(web3.utils.toBN(1e18)), {from: player0});
-        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("20000").mul(web3.utils.toBN(1e18)), {from: player1});
-        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("30000").mul(web3.utils.toBN(1e18)), {from: player2});
-        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("40000").mul(web3.utils.toBN(1e18)), {from: player3});
-        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("50000").mul(web3.utils.toBN(1e18)), {from: player4});
+        player0InitialSBFBalance = await sbfInst.balanceOf(player0);
+        player1InitialSBFBalance = await sbfInst.balanceOf(player1);
+        player2InitialSBFBalance = await sbfInst.balanceOf(player2);
+        govInitialSBFBalance = await sbfInst.balanceOf(initialGov);
 
-        await farmingCenterInst.deposit(0, web3.utils.toBN("10").mul(web3.utils.toBN(1e18)), {from: player0});
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("10000").mul(tokenPrecision), {from: player0});
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("20000").mul(tokenPrecision), {from: player1});
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("30000").mul(tokenPrecision), {from: player2});
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("40000").mul(tokenPrecision), {from: player3});
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN("50000").mul(tokenPrecision), {from: player4});
 
+        await sbfInst.approve(FarmingCenter.address, web3.utils.toBN(1e8).mul(tokenPrecision), {from: initialGov});
         await time.advanceBlock();
+        await time.advanceBlock();
+        const currentHeight =  await time.latestBlock();
+        await farmingCenterInst.addNewFarmingPeriod(
+            200,
+            currentHeight.add(web3.utils.toBN(10)),
+            web3.utils.toBN(20).mul(tokenPrecision),
+            {from: initialGov});
+
+        farmingEndHeight = currentHeight.add(web3.utils.toBN(210))
+
+        await farmingCenterInst.deposit(0, web3.utils.toBN("10").mul(tokenPrecision), {from: player0});
+
+        await time.advanceBlockTo(currentHeight.add(web3.utils.toBN(10)));
 
         let pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
-        assert(pendingSBFPlayer0, "0", "wrong pending SBF");
+        assert.equal(pendingSBFPlayer0, "0", "wrong pending SBF");
 
         await time.advanceBlock();
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
-        assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("20").mul(web3.utils.toBN(1e18)).toString(), "wrong pending SBF");
+        assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("20").mul(tokenPrecision).toString(), "wrong pending SBF");
 
         await time.advanceBlock();
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
-        assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("40").mul(web3.utils.toBN(1e18)).toString(), "wrong pending SBF");
+        assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("40").mul(tokenPrecision).toString(), "wrong pending SBF");
 
-        await farmingCenterInst.deposit(0, web3.utils.toBN("20").mul(web3.utils.toBN(1e18)), {from: player1});
+        await farmingCenterInst.deposit(0, web3.utils.toBN("20").mul(tokenPrecision), {from: player1});
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
-        assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("60").mul(web3.utils.toBN(1e18)).toString(), "wrong pending SBF");
+        assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("60").mul(tokenPrecision).toString(), "wrong pending SBF");
         let pendingSBFPlayer1 = await farmingCenterInst.pendingSBF(0, player1);
         assert.equal(pendingSBFPlayer1.toString(), "0", "wrong pending SBF");
 
-        await farmingCenterInst.deposit(0, web3.utils.toBN("30").mul(web3.utils.toBN(1e18)), {from: player2});
+        await farmingCenterInst.deposit(0, web3.utils.toBN("30").mul(tokenPrecision), {from: player2});
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(0, player0);
         assert.equal(pendingSBFPlayer0.toString(), "66666666666660000000", "wrong pending SBF");
         pendingSBFPlayer1 = await farmingCenterInst.pendingSBF(0, player1);
@@ -119,31 +144,31 @@ contract('FarmingCenter Contract', (accounts) => {
         const farmingCenterInst = await FarmingCenter.deployed();
         const farmRewardLockInst = await FarmRewardLock.deployed();
 
-        await steakBankInst.stake(web3.utils.toBN("50").mul(web3.utils.toBN(1e18)), {from: player0, value: 5002e16});
-        await steakBankInst.stake(web3.utils.toBN("50").mul(web3.utils.toBN(1e18)), {from: player1, value: 5002e16});
-        await steakBankInst.stake(web3.utils.toBN("50").mul(web3.utils.toBN(1e18)), {from: player2, value: 5002e16});
+        await steakBankInst.stake(web3.utils.toBN("50").mul(tokenPrecision), {from: player0, value: 5002e16});
+        await steakBankInst.stake(web3.utils.toBN("50").mul(tokenPrecision), {from: player1, value: 5002e16});
+        await steakBankInst.stake(web3.utils.toBN("50").mul(tokenPrecision), {from: player2, value: 5002e16});
 
-        await lbnbInst.approve(FarmingCenter.address, web3.utils.toBN("50").mul(web3.utils.toBN(1e18)), {from: player0});
-        await lbnbInst.approve(FarmingCenter.address, web3.utils.toBN("50").mul(web3.utils.toBN(1e18)), {from: player1});
-        await lbnbInst.approve(FarmingCenter.address, web3.utils.toBN("50").mul(web3.utils.toBN(1e18)), {from: player2});
+        await lbnbInst.approve(FarmingCenter.address, web3.utils.toBN("50").mul(tokenPrecision), {from: player0});
+        await lbnbInst.approve(FarmingCenter.address, web3.utils.toBN("50").mul(tokenPrecision), {from: player1});
+        await lbnbInst.approve(FarmingCenter.address, web3.utils.toBN("50").mul(tokenPrecision), {from: player2});
 
-        await farmingCenterInst.add(1000, LBNB.address, true, 5, 10, {from: initialGov});
+        await farmingCenterInst.add(1000, LBNB.address, true, 50, 100, {from: initialGov});
 
         let pool0Info = await farmingCenterInst.poolInfo(0)
         assert.equal(pool0Info.allocPoint, "1000", "wrong allocPoint");
         let pool1Info = await farmingCenterInst.poolInfo(1)
         assert.equal(pool1Info.allocPoint, "1000", "wrong allocPoint");
 
-        await farmingCenterInst.deposit(1, web3.utils.toBN("10").mul(web3.utils.toBN(1e18)), {from: player0});
+        await farmingCenterInst.deposit(1, web3.utils.toBN("10").mul(tokenPrecision), {from: player0});
         let pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(1, player0);
-        assert(pendingSBFPlayer0, "0", "wrong pending SBF");
+        assert.equal(pendingSBFPlayer0, "0", "wrong pending SBF");
 
         await time.advanceBlock();
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(1, player0);
         assert.equal(pendingSBFPlayer0.toString(), "10000000000000000000", true, "wrong pending SBF");
 
-        await farmingCenterInst.deposit(1, web3.utils.toBN("10").mul(web3.utils.toBN(1e18)), {from: player1});
-        await farmingCenterInst.deposit(1, web3.utils.toBN("20").mul(web3.utils.toBN(1e18)), {from: player2});
+        await farmingCenterInst.deposit(1, web3.utils.toBN("10").mul(tokenPrecision), {from: player1});
+        await farmingCenterInst.deposit(1, web3.utils.toBN("20").mul(tokenPrecision), {from: player2});
 
         pendingSBFPlayer0 = await farmingCenterInst.pendingSBF(1, player0);
         assert.equal(pendingSBFPlayer0.toString(), web3.utils.toBN("250").mul(web3.utils.toBN(1e17)).toString(), "wrong pending SBF");
@@ -202,7 +227,7 @@ contract('FarmingCenter Contract', (accounts) => {
         const farmingCenterInst = await FarmingCenter.deployed();
         const farmRewardLockInst = await FarmRewardLock.deployed();
 
-        await time.advanceBlockTo(110);
+        await time.advanceBlockTo(123);
 
         let farmRewardLockInfo = await farmRewardLockInst.userLockInfos(player1);
         assert.equal(farmRewardLockInfo.lockedAmount.toString(), "0", "wrong lockedAmount");
@@ -215,7 +240,7 @@ contract('FarmingCenter Contract', (accounts) => {
         assert.equal(farmRewardLockInfo.lockedAmount.toString(), "51600000000000000000", "wrong lockedAmount");
         assert.equal(farmRewardLockInfo.unlockedAmount.toString(), "0", "wrong unlockedAmount");
 
-        await time.advanceBlockTo(120);
+        await time.advanceBlockTo(133);
 
         await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player1});
 
@@ -252,23 +277,54 @@ contract('FarmingCenter Contract', (accounts) => {
         const farmingCenterInst = await FarmingCenter.deployed();
         const farmRewardLockInst = await FarmRewardLock.deployed();
 
-        await time.advanceBlockTo(300);
+        await time.advanceBlockTo(farmingEndHeight.sub(web3.utils.toBN(20)));
 
         let playerSBFBalancePreHarvest = await sbfInst.balanceOf(player0);
         await farmingCenterInst.deposit(0, "0", {from: player0});
         let playerSBFBalancePostHarvest = await sbfInst.balanceOf(player0);
-        assert.equal(playerSBFBalancePostHarvest.sub(playerSBFBalancePreHarvest).toString(),"144333333333330000000", "wrong harvest amount");
+        assert.equal(playerSBFBalancePostHarvest.sub(playerSBFBalancePreHarvest).toString(),"141333333333330000000", "wrong harvest amount");
 
-        await time.advanceBlockTo(320);
+        await time.advanceBlockTo(farmingEndHeight);
 
         playerSBFBalancePreHarvest = await sbfInst.balanceOf(player0);
         await farmingCenterInst.deposit(0, "0", {from: player0});
         playerSBFBalancePostHarvest = await sbfInst.balanceOf(player0);
-        assert.equal(playerSBFBalancePostHarvest.sub(playerSBFBalancePreHarvest).toString(),"6666666666660000000", "wrong harvest amount");
+        assert.equal(playerSBFBalancePostHarvest.sub(playerSBFBalancePreHarvest).toString(),"12666666666660000000", "wrong harvest amount");
 
-        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player0});
+        await farmingCenterInst.deposit(0, "0", {from: player0});
 
-        await time.advanceBlockTo(360);
+        await time.advanceBlockTo(farmingEndHeight.add(web3.utils.toBN(40)));
+
+        let player0UserInfo = await farmingCenterInst.userInfo(0, player0);
+        let player1UserInfo = await farmingCenterInst.userInfo(0, player1);
+        let player2UserInfo = await farmingCenterInst.userInfo(0, player2);
+        await farmingCenterInst.withdraw(0, player0UserInfo[0], {from: player0});
+        await farmingCenterInst.withdraw(0, player1UserInfo[0], {from: player1});
+        await farmingCenterInst.withdraw(0, player2UserInfo[0], {from: player2});
+
+        player0UserInfo = await farmingCenterInst.userInfo(1, player0);
+        player1UserInfo = await farmingCenterInst.userInfo(1, player1);
+        player2UserInfo = await farmingCenterInst.userInfo(1, player2);
+        await farmingCenterInst.withdraw(1, player0UserInfo[0], {from: player0});
+        await farmingCenterInst.withdraw(1, player1UserInfo[0], {from: player1});
+        await farmingCenterInst.withdraw(1, player2UserInfo[0], {from: player2});
+
+        await farmRewardLockInst.claim({from: player0});
+        await farmRewardLockInst.claim({from: player1});
+
+        let player0FinalSBFBalance = await sbfInst.balanceOf(player0);
+        let player1FinalSBFBalance = await sbfInst.balanceOf(player1);
+        let player2FinalSBFBalance = await sbfInst.balanceOf(player2);
+        let govFinalSBFBalance = await sbfInst.balanceOf(initialGov);
+
+        const totalMinedSBF = player0FinalSBFBalance
+            .add(player1FinalSBFBalance)
+            .add(player2FinalSBFBalance)
+            .sub(player0InitialSBFBalance)
+            .sub(player1InitialSBFBalance)
+            .sub(player2InitialSBFBalance);
+        assert.equal(totalMinedSBF.toString(), "3989999999999880000000", "wrong sbf change");
+        assert.equal(govInitialSBFBalance.sub(govFinalSBFBalance).toString(), "4000000000000000000000", "wrong sbf change")
 
         await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player0});
         await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player1});
@@ -277,18 +333,17 @@ contract('FarmingCenter Contract', (accounts) => {
         await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player1});
         await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player2});
 
-        const sbfTotalSupply = await sbfInst.totalSupply();
-        assert.equal(sbfTotalSupply.sub(web3.utils.toBN(46000000).mul(web3.utils.toBN(1e18))).toString(), "4189999999999840000000", "wrong sbf total supply"); //approximately 10 * 100 *2 + 10 *（320 - 100）= 4200
+        player0FinalSBFBalance = await sbfInst.balanceOf(player0);
+        player1FinalSBFBalance = await sbfInst.balanceOf(player1);
+        player2FinalSBFBalance = await sbfInst.balanceOf(player2);
 
-        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player0});
-        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player1});
-        await farmingCenterInst.deposit(0, web3.utils.toBN("0"), {from: player2});
-        await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player0});
-        await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player1});
-        await farmingCenterInst.deposit(1, web3.utils.toBN("0"), {from: player2});
-
-        const newSBFTotalSupply = await sbfInst.totalSupply();
-        assert.equal(newSBFTotalSupply.toString(), sbfTotalSupply.toString(), "wrong sbf total supply"); // no new sbf will be mint
+        const newTotalMinedSBF = player0FinalSBFBalance
+            .add(player1FinalSBFBalance)
+            .add(player2FinalSBFBalance)
+            .sub(player0InitialSBFBalance)
+            .sub(player1InitialSBFBalance)
+            .sub(player2InitialSBFBalance)
+        assert.equal(newTotalMinedSBF.toString(), totalMinedSBF.toString(), "wrong sbf total supply");
 
         let beforeEmergencyWithdrawAmountPlayer0 = await sbfInst.balanceOf(player0);
         let beforeEmergencyWithdrawAmountPlayer1 = await sbfInst.balanceOf(player1);
@@ -302,9 +357,9 @@ contract('FarmingCenter Contract', (accounts) => {
         let afterEmergencyWithdrawAmountPlayer1 = await sbfInst.balanceOf(player1);
         let afterEmergencyWithdrawAmountPlayer2 = await sbfInst.balanceOf(player2);
 
-        assert.equal(afterEmergencyWithdrawAmountPlayer0.sub(beforeEmergencyWithdrawAmountPlayer0).toString(), "10000000000000000000", "wrong sbf balance change");
-        assert.equal(afterEmergencyWithdrawAmountPlayer1.sub(beforeEmergencyWithdrawAmountPlayer1).toString(), "20000000000000000000", "wrong sbf balance change");
-        assert.equal(afterEmergencyWithdrawAmountPlayer2.sub(beforeEmergencyWithdrawAmountPlayer2).toString(), "30000000000000000000", "wrong sbf balance change");
+        assert.equal(afterEmergencyWithdrawAmountPlayer0.sub(beforeEmergencyWithdrawAmountPlayer0).toString(), "0", "wrong sbf balance change");
+        assert.equal(afterEmergencyWithdrawAmountPlayer1.sub(beforeEmergencyWithdrawAmountPlayer1).toString(), "0", "wrong sbf balance change");
+        assert.equal(afterEmergencyWithdrawAmountPlayer2.sub(beforeEmergencyWithdrawAmountPlayer2).toString(), "0", "wrong sbf balance change");
 
         beforeEmergencyWithdrawAmountPlayer0 = await lbnbInst.balanceOf(player0);
         beforeEmergencyWithdrawAmountPlayer1 = await lbnbInst.balanceOf(player1);
@@ -318,9 +373,8 @@ contract('FarmingCenter Contract', (accounts) => {
         afterEmergencyWithdrawAmountPlayer1 = await lbnbInst.balanceOf(player1);
         afterEmergencyWithdrawAmountPlayer2 = await lbnbInst.balanceOf(player2);
 
-        assert.equal(afterEmergencyWithdrawAmountPlayer0.sub(beforeEmergencyWithdrawAmountPlayer0).toString(), "10000000000000000000", "wrong lbnb balance change");
-        assert.equal(afterEmergencyWithdrawAmountPlayer1.sub(beforeEmergencyWithdrawAmountPlayer1).toString(), "10000000000000000000", "wrong lbnb balance change");
-        assert.equal(afterEmergencyWithdrawAmountPlayer2.sub(beforeEmergencyWithdrawAmountPlayer2).toString(), "20000000000000000000", "wrong lbnb balance change");
-
+        assert.equal(afterEmergencyWithdrawAmountPlayer0.sub(beforeEmergencyWithdrawAmountPlayer0).toString(), "0", "wrong lbnb balance change");
+        assert.equal(afterEmergencyWithdrawAmountPlayer1.sub(beforeEmergencyWithdrawAmountPlayer1).toString(), "0", "wrong lbnb balance change");
+        assert.equal(afterEmergencyWithdrawAmountPlayer2.sub(beforeEmergencyWithdrawAmountPlayer2).toString(), "0", "wrong lbnb balance change");
     });
 });
