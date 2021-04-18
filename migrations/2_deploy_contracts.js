@@ -9,11 +9,13 @@ const SteakBank = artifacts.require("SteakBankImpl");
 
 const FarmRewardLock = artifacts.require("FarmRewardLock");
 const FarmingCenter = artifacts.require("FarmingCenter");
+const BlindFarmingCenter = artifacts.require("BlindFarmingCenter");
 
 const Governor = artifacts.require("Governor");
 const Timelock = artifacts.require("Timelock");
 
 const MockPancakeRouter = artifacts.require("MockPancakeRouter");
+const MockLPToken = artifacts.require("MockLPToken");
 
 module.exports = function (deployer, network, accounts) {
   deployerAccount = accounts[0];
@@ -24,6 +26,8 @@ module.exports = function (deployer, network, accounts) {
   deployer.deploy(SteakBank).then(async () => {
     await deployer.deploy(FarmRewardLock);
     await deployer.deploy(FarmingCenter);
+    await deployer.deploy(BlindFarmingCenter);
+    await deployer.deploy(MockLPToken, initialGov);
 
     await deployer.deploy(LBNB, SteakBank.address);
     await deployer.deploy(SBF, initialGov);
@@ -42,11 +46,12 @@ module.exports = function (deployer, network, accounts) {
     const steakBankInst = await SteakBank.deployed();
     const farmRewardLockInst = await FarmRewardLock.deployed();
     const farmingCenterInst = await FarmingCenter.deployed();
+    const blindFarmingCenterInst = await BlindFarmingCenter.deployed();
     const sbfInst = await SBF.deployed();
 
     await steakBankInst.initialize(initialGov, LBNB.address, SBF.address, bcStakingTSS, CommunityTaxVault.address, StakingRewardVault.address, UnstakeVault.address, "10", {from: deployerAccount});
-    await farmRewardLockInst.initialize(SBF.address, "100", "100", FarmingCenter.address, initialGov, {from: deployerAccount});
-    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, "10000000000000000000", "30", "320", "100", "2", "7", "10", {from: deployerAccount});
-    await sbfInst.transferOwnership(FarmingCenter.address, {from: initialGov});
+    await farmRewardLockInst.initialize(SBF.address, "113", "100", FarmingCenter.address, initialGov, {from: deployerAccount});
+    await farmingCenterInst.initialize(initialGov, SBF.address, FarmRewardLock.address, 7, 10, {from: deployerAccount});
+    await blindFarmingCenterInst.initialize(initialGov, SBF.address, {from: deployerAccount});
   });
 };
