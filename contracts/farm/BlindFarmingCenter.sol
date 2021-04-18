@@ -63,6 +63,7 @@ contract BlindFarmingCenter is Ownable {
 
     function startBindFarming(uint256 sbfRewardPerBlock, uint256 startHeight, uint256 farmingPeriod) public onlyOwner {
         require(block.number < startHeight, "startHeight must be larger than current block height");
+        require(startHeight.add(farmingPeriod) < releaseHeight, "farming endHeight must be less than releaseHeight");
         massUpdatePools();
 
         uint256 sbfAmount = sbfRewardPerBlock.mul(farmingPeriod);
@@ -86,22 +87,13 @@ contract BlindFarmingCenter is Ownable {
         sbfPerBlock = sbfPerBlock.add(increasedRewardPerBlock);
     }
 
-    function extendBlindFarmingPeriod(uint256 extendBlockNumber) public onlyOwner {
+    function increaseBlindFarmingPeriod(uint256 increasedBlockNumber) public onlyOwner {
         require(block.number < endBlock, "Previous farming is already completed");
         massUpdatePools();
 
-        uint256 sbfAmount = sbfPerBlock.mul(extendBlockNumber);
+        uint256 sbfAmount = sbfPerBlock.mul(increasedBlockNumber);
         sbf.safeTransferFrom(msg.sender, address(this), sbfAmount);
-        endBlock = endBlock.add(extendBlockNumber);
-    }
-
-    function trimBlindFarmingPeriod(uint256 trimBlockNumber) public onlyOwner {
-        require(block.number < endBlock.sub(trimBlockNumber), "Trim too many blocks");
-        massUpdatePools();
-
-        uint256 sbfAmount = sbfPerBlock.mul(trimBlockNumber);
-        sbf.safeTransferFrom(address(this), msg.sender, sbfAmount);
-        endBlock = endBlock.sub(trimBlockNumber);
+        endBlock = endBlock.add(increasedBlockNumber);
     }
 
     function poolLength() external view returns (uint256) {
@@ -121,7 +113,6 @@ contract BlindFarmingCenter is Ownable {
             lastRewardBlock: lastRewardBlock,
             accSBFPerShare: 0
         }));
-        updateSBFPool();
     }
 
     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
@@ -133,21 +124,6 @@ contract BlindFarmingCenter is Ownable {
         poolInfo[_pid].allocPoint = _allocPoint;
         if (prevAllocPoint != _allocPoint) {
             totalAllocPoint = totalAllocPoint.sub(prevAllocPoint).add(_allocPoint);
-            updateSBFPool();
-        }
-    }
-
-    function updateSBFPool() internal {
-        uint256 length = poolInfo.length;
-        uint256 points = 0;
-        for (uint256 pid = 1; pid < length; ++pid) {
-            points = points.add(poolInfo[pid].allocPoint);
-        }
-        // ensure the first pool weight is no less than 20%
-        points = points.div(4);
-        if (points != 0 && points > poolInfo[0].allocPoint) {
-            totalAllocPoint = totalAllocPoint.sub(poolInfo[0].allocPoint).add(points);
-            poolInfo[0].allocPoint = points;
         }
     }
 
@@ -263,7 +239,7 @@ contract BlindFarmingCenter is Ownable {
     }
 
     function setReleaseHeight(uint256 newReleaseHeight) public onlyOwner {
-        require(releaseHeight > block.number, "release height must be larger than current height");
+        require(newReleaseHeight > block.number, "release height must be larger than current height");
         releaseHeight = newReleaseHeight;
     }
 

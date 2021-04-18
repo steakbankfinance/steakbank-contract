@@ -15,6 +15,7 @@ const Governor = artifacts.require("Governor");
 const Timelock = artifacts.require("Timelock");
 
 const MockPancakeRouter = artifacts.require("MockPancakeRouter");
+const MockLPToken = artifacts.require("MockLPToken");
 
 module.exports = function (deployer, network, accounts) {
   deployerAccount = accounts[0];
@@ -26,6 +27,7 @@ module.exports = function (deployer, network, accounts) {
     await deployer.deploy(FarmRewardLock);
     await deployer.deploy(FarmingCenter);
     await deployer.deploy(BlindFarmingCenter);
+    await deployer.deploy(MockLPToken, initialGov);
 
     await deployer.deploy(LBNB, SteakBank.address);
     await deployer.deploy(SBF, initialGov);
