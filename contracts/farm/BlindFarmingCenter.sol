@@ -102,6 +102,10 @@ contract BlindFarmingCenter is Ownable {
 
     function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate) public onlyOwner {
         require(_lpToken!=sbf, "can't support SBF pool");
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            PoolInfo memory pool = poolInfo[pid];
+            require(pool.lpToken!=_lpToken, "duplicated pool");
+        }
         if (_withUpdate) {
             massUpdatePools();
         }
