@@ -1,64 +1,15 @@
 pragma solidity 0.6.12;
 
 import "./lib/Ownable.sol";
-import "./interface/IMintBurnToken.sol";
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
-
-contract Tokenlock is Ownable {
-    uint8 isLocked = 0;
-
-    event Freezed();
-    event UnFreezed();
-
-    modifier validLock {
-        require(isLocked == 0, "Token is locked");
-        _;
-    }
-
-    function freeze() public onlyOwner {
-        isLocked = 1;
-
-        emit Freezed();
-    }
-
-    function unfreeze() public onlyOwner {
-        isLocked = 0;
-
-        emit UnFreezed();
-    }
-}
 
 interface ApproveAndCallFallBack {
     function receiveApproval(address from, uint256 tokens, address token, bytes memory data) external;
 }
 
-contract UserLock is Ownable {
-    mapping(address => bool) blacklist;
-
-    event LockUser(address indexed who);
-    event UnlockUser(address indexed who);
-
-    modifier permissionCheck {
-        require(!blacklist[msg.sender], "Blocked user");
-        _;
-    }
-
-    function lockUser(address who) public onlyOwner {
-        blacklist[who] = true;
-
-        emit LockUser(who);
-    }
-
-    function unlockUser(address who) public onlyOwner {
-        blacklist[who] = false;
-
-        emit UnlockUser(who);
-    }
-}
-
-contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
+contract SBF is IBEP20, Ownable {
     using SafeMath for uint256;
 
     /// @notice Official record of token balances for each account
@@ -177,7 +128,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param amount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address recipient, uint256 amount) override external validLock permissionCheck returns (bool) {
+    function transfer(address recipient, uint256 amount) override external returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -199,7 +150,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param amount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint256 amount) override external validLock permissionCheck returns (bool) {
+    function approve(address spender, uint256 amount) override external   returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
@@ -211,7 +162,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param data The data to pass to receiveApproval(...)
      * @return true
      */
-    function approveAndCall(address spender, uint256 amount, bytes memory data) public validLock permissionCheck returns (bool) {
+    function approveAndCall(address spender, uint256 amount, bytes memory data) public returns (bool) {
         _approve(_msgSender(), spender, amount);
         ApproveAndCallFallBack(spender).receiveApproval(_msgSender(), amount, address(this), data);
         return true;
@@ -224,7 +175,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param amount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address sender, address recipient, uint256 amount) override external validLock permissionCheck returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) override external returns (bool) {
         _transfer(sender, recipient, amount);
         address spender = _msgSender();
         uint256 spenderAllowance = _allowances[sender][spender];
@@ -242,7 +193,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param addedValue The additional number of tokens to allow which may be spent
      * @return Whether or not the approval succeeded
      */
-    function increaseAllowance(address spender, uint256 addedValue) public validLock permissionCheck returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
@@ -255,7 +206,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param subtractedValue The subtractional number of tokens to allow which may be spent
      * @return Whether or not the approval succeeded
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public validLock permissionCheck returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue));
         return true;
     }
@@ -266,18 +217,8 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param amount The number of tokens that are burnt
      * @return true
      */
-    function burn(uint256 amount) override external validLock permissionCheck returns (bool) {
+    function burn(uint256 amount) external   returns (bool) {
         _burn(_msgSender(), amount);
-        return true;
-    }
-
-    /**
-     * @notice Mint the amount of tokens to the 'to', increasing the total supply.
-     * @param amount The number of tokens that are minted
-     * @return true
-     */
-    function mintTo(address to, uint256 amount) override external validLock onlyOwner returns (bool) {
-        _mint(to, amount);
         return true;
     }
 
@@ -285,7 +226,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
      */
-    function delegate(address delegatee) external validLock permissionCheck {
+    function delegate(address delegatee) external   {
         return _delegate(_msgSender(), delegatee);
     }
 
@@ -298,7 +239,7 @@ contract SBF is IBEP20, IMintBurnToken, Tokenlock, UserLock {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external validLock permissionCheck {
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external   {
         bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(_name)), getChainId(), address(this)));
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));

@@ -116,16 +116,4 @@ contract FarmRewardLock is Context, Ownable, IFarmRewardLock {
         sbf.safeTransfer(_msgSender(), claimAmount);
         return true;
     }
-
-    function setFarmingCenter(address newFarmingCenter) onlyOwner external {
-        farmingCenter = newFarmingCenter;
-    }
-
-    function setStartReleaseHeight(uint256 newStartReleaseHeight) onlyOwner external {
-        startReleaseHeight = newStartReleaseHeight;
-    }
-
-    function setReleasePeriod(uint256 newReleasePeriod) onlyOwner external {
-        releasePeriod = newReleasePeriod;
-    }
 }

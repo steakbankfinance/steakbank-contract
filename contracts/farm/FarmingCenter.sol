@@ -111,6 +111,10 @@ contract FarmingCenter is Ownable {
 
     function add(uint256 _allocPoint, IBEP20 _lpToken, bool _withUpdate, uint256 molecularOfLockRate, uint256 denominatorOfLockRate) public onlyOwner {
         require(denominatorOfLockRate>0&&denominatorOfLockRate>=molecularOfLockRate, "invalid denominatorOfLockRate or molecularOfLockRate");
+        for (uint256 pid = 0; pid < poolInfo.length; ++pid) {
+            PoolInfo memory pool = poolInfo[pid];
+            require(pool.lpToken!=_lpToken, "duplicated pool");
+        }
         if (_withUpdate) {
             massUpdatePools();
         }
