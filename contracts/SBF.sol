@@ -74,7 +74,7 @@ contract SBF is IBEP20, Ownable {
         _name = "Steak Bank Finance";
         _symbol = "SBF";
         _decimals = 18;
-        _mint(account, 100000000e18);
+        _mint(account, 10000000000e18);
         super.initializeOwner(account);
     }
 

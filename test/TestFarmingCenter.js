@@ -49,7 +49,7 @@ contract('FarmingCenter Contract', (accounts) => {
         const sbfDecimals = await sbfInst.decimals();
         assert.equal(sbfDecimals, "18", "wrong decimals");
         const sbfTotalSupply = await sbfInst.totalSupply();
-        assert.equal(sbfTotalSupply, web3.utils.toBN(1e8).mul(tokenPrecision).toString(), "wrong total supply");
+        assert.equal(sbfTotalSupply, web3.utils.toBN(1e10).mul(tokenPrecision).toString(), "wrong total supply");
         const sbfOwner = await sbfInst.getOwner();
         assert.equal(sbfOwner.toString(), initialGov.toString(), "wrong owner");
 

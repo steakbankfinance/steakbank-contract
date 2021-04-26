@@ -77,15 +77,15 @@ contract('Governance Contract', (accounts) => {
         const fakePancakeRouter = accounts[2];
 
         await sbfInst.delegate(initialGov, {from: initialGov})
-        await sbfInst.transfer(player0, web3.utils.toBN(1e7).mul(web3.utils.toBN(1e18)), {from: initialGov})
-        await sbfInst.transfer(player1, web3.utils.toBN(1e7).mul(web3.utils.toBN(1e18)), {from: initialGov})
+        await sbfInst.transfer(player0, web3.utils.toBN(1e9).mul(web3.utils.toBN(1e18)), {from: initialGov})
+        await sbfInst.transfer(player1, web3.utils.toBN(1e9).mul(web3.utils.toBN(1e18)), {from: initialGov})
         await sbfInst.delegate(player0, {from: player0})
         await sbfInst.delegate(player1, {from: player1})
 
         let currentVotes = await sbfInst.getCurrentVotes(player0);
-        assert.equal(currentVotes.toString(), web3.utils.toBN(1e7).mul(web3.utils.toBN(1e18)).toString(), "wrong voting power");
+        assert.equal(currentVotes.toString(), web3.utils.toBN(1e9).mul(web3.utils.toBN(1e18)).toString(), "wrong voting power");
         currentVotes = await sbfInst.getCurrentVotes(initialGov);
-        assert.equal(currentVotes.toString(), "80000000000000000000000000", "wrong voting power")
+        assert.equal(currentVotes.toString(), "8000000000000000000000000000", "wrong voting power")
 
         const abiEncodeDataForSetPancakeRouterAddr = web3.eth.abi.encodeFunctionCall({
             "inputs": [
