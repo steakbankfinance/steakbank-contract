@@ -18,7 +18,7 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
     address public pancakeRouterAddr;
 
     event Deposit(address from, uint256 amount);
-    event Withdraw(address recipient, uint256 amount);
+    event Withdraw(address tokenAddr, address recipient, uint256 amount);
     event BuyAndBurnSBF(uint256 burnedSBFAmount, uint256 costBNBAmount, uint256 costLBNBAmount);
     event GovernorshipTransferred(address oldGovernor, address newGovernor);
 
@@ -58,7 +58,17 @@ contract CommunityTaxVault is IVault, ReentrancyGuard {
             amount = address(this).balance;
         }
         recipient.transfer(amount);
-        emit Withdraw(recipient, amount);
+        emit Withdraw(address(0x0), recipient, amount);
+        return amount;
+    }
+
+    function claimLBNB(uint256 amount, address recipient) nonReentrant onlyGov external returns(uint256) {
+        uint256 lbnbBalance = IBEP20(lbnbAddr).balanceOf(address(this));
+        if (lbnbBalance < amount) {
+            amount = lbnbBalance;
+        }
+        IBEP20(lbnbAddr).transfer(recipient, amount);
+        emit Withdraw(lbnbAddr, recipient, amount);
         return amount;
     }
 

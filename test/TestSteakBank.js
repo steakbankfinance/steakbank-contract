@@ -394,4 +394,71 @@ contract('SteakBank Contract', (accounts) => {
             return ev.staker.toLowerCase() === player0.toLowerCase();
         });
     });
+    it('Test setStakeFeeRate and setUnstakeFeeRate', async () => {
+        deployerAccount = accounts[0];
+        initialGov = accounts[1];
+        player0 = accounts[5];
+
+        const steakBankInst = await SteakBank.deployed();
+
+        await steakBankInst.setStakeFeeRate(0, 1, {from: initialGov});
+
+        try {
+            await steakBankInst.setStakeFeeRate(0, 0, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("stakeFeeDenominator must be positive"));
+        }
+
+        try {
+            await steakBankInst.setStakeFeeRate(1, 0, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("stakeFeeDenominator must be positive"));
+        }
+
+        try {
+            await steakBankInst.setStakeFeeRate(1, 200, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("stake fee rate must be less than 0.5%"));
+        }
+
+
+        await steakBankInst.setUnstakeFeeRate(0, 1, {from: initialGov});
+
+        try {
+            await steakBankInst.setUnstakeFeeRate(0, 0, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("unstakeFeeDenominator must be positive"));
+        }
+
+        try {
+            await steakBankInst.setUnstakeFeeRate(1, 0, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("unstakeFeeDenominator must be positive"));
+        }
+
+        try {
+            await steakBankInst.setUnstakeFeeRate(1, 200, {from: initialGov});
+            assert.fail();
+        } catch (error) {
+            assert.ok(error.toString().includes("unstake fee rate must be less than 0.5%"));
+        }
+
+        await steakBankInst.setStakeFeeRate(5, 10000, {from: initialGov});
+        await steakBankInst.setUnstakeFeeRate(5, 10000, {from: initialGov});
+
+        const stakeFeeMolecular = await steakBankInst.stakeFeeMolecular();
+        const stakeFeeDenominator = await steakBankInst.stakeFeeDenominator();
+        assert.equal(stakeFeeMolecular, "5","wrong stakeFeeMolecular");
+        assert.equal(stakeFeeDenominator, "10000","wrong stakeFeeDenominator");
+
+        const unstakeFeeMolecular = await steakBankInst.unstakeFeeMolecular();
+        const unstakeFeeDenominator = await steakBankInst.unstakeFeeDenominator();
+        assert.equal(unstakeFeeMolecular, "5","wrong unstakeFeeMolecular");
+        assert.equal(unstakeFeeDenominator, "10000","wrong unstakeFeeDenominator");
+    });
 });

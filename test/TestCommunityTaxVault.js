@@ -175,4 +175,29 @@ contract('CommunityTaxVault Contract', (accounts) => {
         assert.equal(pancakeRouterAddr.toString().toLowerCase(), SBF.address.toString().toLowerCase(), "wrong pancakeRouter addr");
         await communityTaxInst.setPancakeRouterAddr(MockPancakeRouter.address, {from: initialGov});
     });
+    it('Test Claim LBNB', async () => {
+        deployerAccount = accounts[0];
+        initialGov = accounts[1];
+        govGuardian = accounts[3];
+        bcStakingTSS = accounts[4];
+        player0 = accounts[5];
+        player1 = accounts[6];
+        player2 = accounts[7];
+        player3 = accounts[8];
+        player4 = accounts[9];
+
+        const communityTaxInst = await CommunityTaxVault.deployed();
+        const steakBankInst = await SteakBank.deployed();
+        const lbnbInst = await LBNB.deployed();
+        await steakBankInst.stake("10000000000000000000", {from: player4, value: 1002e16});
+
+        await lbnbInst.approve(SteakBank.address, "9990000000000000000", {from: player4});
+        await steakBankInst.unstake("9990000000000000000", {from: player4});
+        let communityTaxVaultLBNBBalance = await lbnbInst.balanceOf(CommunityTaxVault.address);
+        assert.equal(communityTaxVaultLBNBBalance.toString(), "9990000000000000", "wrong LBNB amount");
+
+        await communityTaxInst.claimLBNB("9990000000000000", initialGov, {from: initialGov});
+        communityTaxVaultLBNBBalance = await lbnbInst.balanceOf(CommunityTaxVault.address);
+        assert.equal(communityTaxVaultLBNBBalance.toString(), "0", "wrong LBNB amount");
+    });
 });
