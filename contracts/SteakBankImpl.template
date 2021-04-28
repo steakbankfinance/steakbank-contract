@@ -183,14 +183,20 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
-    function setStakeFeeRate(uint256 newStakeFeeMolecular, uint256 newStakeFeeDenominator) onlyAdmin external {
-        require(newStakeFeeMolecular<newStakeFeeDenominator, "stakeFeeMolecular must be less than stakeFeeDenominator");
+     function setStakeFeeRate(uint256 newStakeFeeMolecular, uint256 newStakeFeeDenominator) onlyAdmin external {
+        require(newStakeFeeDenominator>0, "stakeFeeDenominator must be positive");
+        if (newStakeFeeMolecular>0) {
+            require(newStakeFeeDenominator.div(newStakeFeeMolecular)>200, "stake fee rate must be less than 0.5%");
+        }
         stakeFeeMolecular = newStakeFeeMolecular;
         stakeFeeDenominator = newStakeFeeDenominator;
     }
 
     function setUnstakeFeeRate(uint256 newUnstakeFeeMolecular, uint256 newUnstakeFeeDenominator) onlyAdmin external {
-        require(newUnstakeFeeMolecular<newUnstakeFeeDenominator, "unstakeFeeMolecular must be less than unstakeFeeDenominator");
+        require(newUnstakeFeeDenominator>0, "unstakeFeeDenominator must be positive");
+        if (newUnstakeFeeMolecular>0) {
+            require(newUnstakeFeeDenominator.div(newUnstakeFeeMolecular)>200, "unstake fee rate must be less than 0.5%");
+        }
         unstakeFeeMolecular = newUnstakeFeeMolecular;
         unstakeFeeDenominator = newUnstakeFeeDenominator;
     }
