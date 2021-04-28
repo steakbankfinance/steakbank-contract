@@ -175,28 +175,24 @@ contract SteakBankImpl is Context, Initializable, ReentrancyGuard {
         emit NewPendingAdmin(pendingAdmin);
     }
 
-    function setBCStakingTSS(address newBCStakingTSS) onlyAdmin external {
-        bcStakingTSS = newBCStakingTSS;
-    }
-
     function setCommunityTaxVault(address payable newCommunityTaxVault) onlyAdmin external {
         communityTaxVault = newCommunityTaxVault;
-    }
-
-    function setStakingRewardVault(address payable newStakingRewardVault) onlyAdmin external {
-        stakingRewardVault = newStakingRewardVault;
-    }
-
-    function setUnstakeVault(address payable newUnstakeVault) onlyAdmin external {
-        unstakeVault = newUnstakeVault;
     }
 
     function setPriceToAccelerateUnstake(uint256 newPriceToAccelerateUnstake) onlyAdmin external {
         priceToAccelerateUnstake = newPriceToAccelerateUnstake;
     }
 
-    function setSBF(address _SBF) onlyAdmin external {
-        SBF = _SBF;
+    function setStakeFeeRate(uint256 newStakeFeeMolecular, uint256 newStakeFeeDenominator) onlyAdmin external {
+        require(newStakeFeeMolecular<newStakeFeeDenominator, "stakeFeeMolecular must be less than stakeFeeDenominator");
+        stakeFeeMolecular = newStakeFeeMolecular;
+        stakeFeeDenominator = newStakeFeeDenominator;
+    }
+
+    function setUnstakeFeeRate(uint256 newUnstakeFeeMolecular, uint256 newUnstakeFeeDenominator) onlyAdmin external {
+        require(newUnstakeFeeMolecular<newUnstakeFeeDenominator, "unstakeFeeMolecular must be less than unstakeFeeDenominator");
+        unstakeFeeMolecular = newUnstakeFeeMolecular;
+        unstakeFeeDenominator = newUnstakeFeeDenominator;
     }
 
     function stake(uint256 amount) nonReentrant mustInPeriod(NORMAL_PERIOD) notContract whenNotPaused external payable returns (bool) {
