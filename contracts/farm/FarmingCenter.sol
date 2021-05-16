@@ -64,15 +64,15 @@ contract FarmingCenter is Ownable {
         startBlock = 0;
         endBlock = 0;
 
-        poolInfo.push(PoolInfo({
-            lpToken: IBEP20(address(_sbf)),
-            allocPoint: 1000,
-            lastRewardBlock: startBlock,
-            accSBFPerShare: 0,
-            molecularOfLockRate: _molecularOfLockRate,
-            denominatorOfLockRate: _denominatorOfLockRate
-        }));
-        totalAllocPoint = 1000;
+//        poolInfo.push(PoolInfo({
+//            lpToken: IBEP20(address(_sbf)),
+//            allocPoint: 1000,
+//            lastRewardBlock: startBlock,
+//            accSBFPerShare: 0,
+//            molecularOfLockRate: _molecularOfLockRate,
+//            denominatorOfLockRate: _denominatorOfLockRate
+//        }));
+//        totalAllocPoint = 1000;
     }
 
     function addNewFarmingPeriod(uint256 farmingPeriod, uint256 startHeight, uint256 sbfRewardPerBlock) public onlyOwner {
@@ -145,17 +145,17 @@ contract FarmingCenter is Ownable {
     }
 
     function updateSBFPool() internal {
-        uint256 length = poolInfo.length;
-        uint256 points = 0;
-        for (uint256 pid = 1; pid < length; ++pid) {
-            points = points.add(poolInfo[pid].allocPoint);
-        }
-        // ensure the first pool weight is no less than 20%
-        points = points.div(4);
-        if (points != 0 && points > poolInfo[0].allocPoint) {
-            totalAllocPoint = totalAllocPoint.sub(poolInfo[0].allocPoint).add(points);
-            poolInfo[0].allocPoint = points;
-        }
+//        uint256 length = poolInfo.length;
+//        uint256 points = 0;
+//        for (uint256 pid = 1; pid < length; ++pid) {
+//            points = points.add(poolInfo[pid].allocPoint);
+//        }
+//        // ensure the first pool weight is no less than 20%
+//        points = points.div(4);
+//        if (points != 0 && points > poolInfo[0].allocPoint) {
+//            totalAllocPoint = totalAllocPoint.sub(poolInfo[0].allocPoint).add(points);
+//            poolInfo[0].allocPoint = points;
+//        }
     }
 
     // Return reward multiplier over the given _from to _to block.
